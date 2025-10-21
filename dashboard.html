@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Fab Lab Reykjavík — Public Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <img src="assets/logo_small.png" alt="Fab Lab" class="logo">
+    <h1>Public Dashboard</h1>
+  </header>
+
+  <main class="container">
+    <!-- KPIs -->
+    <section class="kpis">
+      <div class="kpi">
+        <div class="kpi-value" id="todayTotal">0</div>
+        <div class="kpi-label">Today</div>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="card">
+      <h2>Visitors this week</h2>
+      <canvas id="chartWeek"></canvas>
+    </section>
+
+    <section class="card">
+      <h2>Visitors by Reason</h2>
+      <canvas id="chartReason"></canvas>
+    </section>
+
+    <section class="card">
+      <h2>Most Popular Machines</h2>
+      <canvas id="chartMachines"></canvas>
+    </section>
+
+    <section class="card grid-2">
+      <div>
+        <h2>Visitors by Weekday</h2>
+        <canvas id="chartWeekday"></canvas>
+      </div>
+      <div>
+        <h2>Visitors by Month</h2>
+        <canvas id="chartMonth" height="160"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Heatmap: Total visitors - Hour × Weekday</h2>
+      <div id="heatmap"></div>
+    </section>
+
+    <section class="card">
+      <h2>Heatmap: Total Walk-ins - Hour × Weekday</h2>
+      <div id="heatmapWalkins"></div>
+    </section>
+  </main>
+
+  <!-- Vendor libs -->
+  <script src="vendor/chart.umd.js"></script>
+  <script src="vendor/chartjs-plugin-datalabels.min.js"></script>
+  <script src="vendor/plotly.min.js"></script>
+
+  <!-- Public config (no secrets) -->
+  <script src="js/config.public.js"></script>
+
+  <!-- Shared chart helpers -->
+  <script src="js/api.js"></script>
+  <script src="js/charts.js"></script>
+
+  <script>
+    (async function(){
+      const res = await api.getSummary();
+      if (!res.ok) return;
+
+      document.getElementById("todayTotal").textContent = String(res.today_total ?? 0);
+
+      const toArray = (o)=>{ const e=Object.entries(o||{}).sort((a,b)=>a[0].localeCompare(b[0])); return [e.map(x=>x[0]), e.map(x=>x[1])]; };
+
+      // Week (Mon..Fri)
+      const mon = new Date();
+      const dow = mon.getDay();
+      const diff = (dow === 0 ? -6 : 1 - dow);
+      mon.setDate(mon.getDate() + diff);
+      mon.setHours(0,0,0,0);
+      const days = Array.from({length:5},(_,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+      const weekLabels = days.map(d => d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}));
+      const weekKeys   = days.map(d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
+      charts.bar("chartWeek", weekLabels, weekKeys.map(k => Number((res.week_buckets||{})[k]||0)), "Visitors this week");
+
+      // Reason
+      const [rl, rv] = toArray(res.by_reason);
+      charts.bar("chartReason", rl, rv, "Visitors by Reason");
+
+      // Machines pie
+      const MACHINE_SET = new Set(["Casting/Molding","Clay Printer","Embroidery Machine","Laser","PCB","Sewing","Vacuum Former","Shopbot","Vinyl Cutter","3D Printer"]);
+      const machines = {};
+      for (const [reason, count] of Object.entries(res.by_reason || {})) {
+        if (MACHINE_SET.has(reason)) machines[reason] = count;
+      }
+      const mSorted = Object.entries(machines).sort((a,b)=>b[1]-a[1]);
+      charts.pie("chartMachines", mSorted.map(([k])=>k), mSorted.map(([,v])=>v), "Most Popular Machines");
+
+      // Weekday
+      const wdOrder=["1","2","3","4","5","6","7"], wdLabels=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+      charts.bar("chartWeekday", wdLabels, wdOrder.map(k => res.by_weekday?.[k] || 0), "Visitors by Weekday");
+
+      // Month
+      const [mk, mv] = toArray(res.by_month);
+      const mLabels = mk.map(k => new Date(k).toLocaleString(undefined,{month:"long",year:"numeric"}));
+      charts.bar("chartMonth", mLabels, mv, "Visitors by Month");
+
+      // Heatmap (TOTAL)
+      const hmTotal = res.by_hour_weekday || {};
+      const hours = Array.from({length:13},(_,i)=>String(i+9)); // 9..21
+      const wkeys = ["1","2","3","4","5"]; const wlabels = ["Mon","Tue","Wed","Thu","Fri"];
+      const zTotal=[]; 
+      for (let i=0;i<wkeys.length;i++){
+        const row = hmTotal[wkeys[i]] || {};
+        for (let h=9; h<=21; h++){
+          zTotal.push({ x:String(h), y:wlabels[i], value:Number(row[h]||0) });
+        }
+      }
+      charts.heatmap("heatmap", zTotal, hours, wlabels);
+
+      // Heatmap (WALK-INS)
+      const hmWalk = res.by_hour_weekday_walkin || {};
+      const zWalk=[]; 
+      for (let i=0;i<wkeys.length;i++){
+        const row = hmWalk[wkeys[i]] || {};
+        for (let h=9; h<=21; h++){
+          zWalk.push({ x:String(h), y:wlabels[i], value:Number(row[h]||0) });
+        }
+      }
+      charts.heatmap("heatmapWalkins", zWalk, hours, wlabels);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Fab Lab Reykjavík – Visitor Counter</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/logo_small.png">
+    <link rel="stylesheet" href="css/styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+    <img src="assets/logo_small.png" alt="Fab Lab" class="logo">
+    <h1>Fab Lab Reykjavík Visitor Counter</h1>
+
+    <nav class="header-actions">
+        <a href="dashboard.html" class="action-btn" title="Open public dashboard">
+        <span class="icon" aria-hidden="true">📊</span>
+        <span class="label">Public Dashboard</span>
+        </a>
+
+        <button id="themeToggle" class="action-btn" aria-label="Toggle color theme" title="Toggle theme">
+        <span class="icon" aria-hidden="true">🌙</span>
+        <span class="label">Theme</span>
+        </button>
+
+    </nav>
+    </header>
+
+    <main class="container">
+      <!-- Log Visit -->
+      <section class="card">
+        <h2>Log a Visit</h2>
+        <form id="visitForm" autocomplete="off">
+          <div class="grid">
+            <label>Staff (optional)
+            <select id="staff">
+                <option value="">—</option>
+                <option>Andri</option>
+                <option>Anna</option>
+                <option>Arnar</option>
+                <option>Hafey</option>
+                <option>Magnus</option>
+                <option>Þóra</option>
+            </select>
+            </label>
+            <label>Guests
+              <input id="guests" type="number" min="1" value="1" required>
+            </label>
+            <label>Reason (optional)
+              <input id="reason" list="reasonList" placeholder="Select or type">
+            </label>
+            <label>School (optional)
+              <input id="school" placeholder="e.g. LHÍ">
+            </label>
+          </div>
+          <label>Notes (optional)
+            <textarea id="notes" rows="3" placeholder="Anything notable..."></textarea>
+          </label>
+          <div class="row">
+            <label><input type="checkbox" id="useNow" checked> Use current time</label>
+            <div class="datetime">
+              <input type="date" id="date">
+              <input type="time" id="time" step="60">
+            </div>
+          </div>
+          <button id="saveBtn" class="primary">Add &amp; Save</button>
+          <span id="status" class="status"></span>
+        </form>
+        <datalist id="reasonList"></datalist>
+        <datalist id="staffList"></datalist>
+      </section>
+
+      <!-- KPIs -->
+      <section class="kpis">
+        <div class="kpi"><div class="kpi-value" id="todayTotal">0</div><div class="kpi-label">Today</div></div>
+        <div class="kpi"><div class="kpi-value" id="queueCount">0</div><div class="kpi-label">Pending</div></div>
+      </section>
+
+      <!-- Charts -->
+      <section class="card">
+        <h2>Visitors this week</h2>
+        <canvas id="chartWeek"></canvas>
+      </section>
+
+      <section class="card">
+        <h2>Visitors by Reason</h2>
+        <canvas id="chartReason"></canvas>
+      </section>
+
+      <section class="card">
+        <h2>Most Popular Machines</h2>
+        <canvas id="chartMachines"></canvas>
+      </section>
+
+      <section class="card grid-2">
+        <div>
+            <h2>Visitors by Weekday</h2>
+            <canvas id="chartWeekday"></canvas>
+        </div>
+        <div>
+          <h2>Visitors by Month</h2>
+          <canvas id="chartMonth" height="160"></canvas>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Visitors by School</h2>
+        <canvas id="chartSchool" height="160"></canvas>
+      </section>
+
+      <section class="card">
+        <h2>Heatmap: Total visitors - Hour × Weekday</h2>
+        <div id="heatmap"></div>
+      </section>
+
+      <section class="card">
+        <h2>Heatmap: Total Walk-ins - Hour × Weekday</h2>
+        <div id="heatmapWalkins"></div>
+      </section>
+
+    </main>
+
+    <!-- Vendor libs first -->
+    <script src="vendor/chart.umd.js"></script>
+    <script src="vendor/chartjs-plugin-datalabels.min.js"></script>
+    <script src="vendor/plotly.min.js"></script>
+    <script src="vendor/idb-keyval.js"></script>
+
+
+    <!-- App code (no inline scripts) -->
+    <script src="js/config.js"></script> <!-- copy from config.sample.js -->
+    <script src="js/api.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

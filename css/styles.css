@@ -1,0 +1,166 @@
+/* === THEME TOKENS ======================================================== */
+/* Default = LIGHT (unless user/system says otherwise) */
+:root {
+  color-scheme: light;
+  --bg:#f7f8fa;
+  --card:#ffffff;
+  --text:#0b0c10;
+  --muted:#556070;
+  --accent:#0ea5e9;
+}
+
+/* Auto-switch to DARK if OS prefers — only when user hasn't chosen */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg:#0b0c10;
+    --card:#15171c;
+    --text:#eaf0f6;
+    --muted:#9aa4b2;
+    --accent:#38bdf8;
+  }
+}
+
+/* Manual override via data-theme on <html> (wins over media query) */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg:#f7f8fa;
+  --card:#ffffff;
+  --text:#0b0c10;
+  --muted:#556070;
+  --accent:#0ea5e9;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:#0b0c10;
+  --card:#15171c;
+  --text:#eaf0f6;
+  --muted:#9aa4b2;
+  --accent:#38bdf8;
+}
+
+/* === APP STYLES ========================================================== */
+* { box-sizing: border-box; }
+html,body {
+  margin:0; padding:0;
+  background:var(--bg); color:var(--text);
+  font:16px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+.app-header {
+  display:flex; align-items:center; gap:.75rem;
+  padding:1rem 1.25rem; border-bottom:1px solid #0002;
+}
+.logo { width:28px; height:28px; }
+
+.container { max-width:1100px; margin:1rem auto; padding:0 1rem; }
+
+.card {
+  background:var(--card);
+  border:1px solid #0002;
+  border-radius:12px;
+  padding:1rem; margin-bottom:1rem;
+}
+
+.grid, .grid-2 { display:grid; gap:12px; }
+.grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.grid-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+
+.row { display:flex; align-items:center; gap:12px; justify-content:space-between; }
+
+label { display:flex; flex-direction:column; gap:.35rem; font-size:.95rem; }
+
+/* Inputs: include fallback + color-mix for nicer borders on modern browsers */
+input, textarea, select, button {
+  background:#0f1116; /* dark fallback */
+  background:color-mix(in oklab, var(--card) 92%, black);
+  color:var(--text);
+  border:1px solid #2a2f3a; /* fallback */
+  border:1px solid color-mix(in oklab, var(--text) 14%, transparent);
+  border-radius:8px; padding:.6rem .7rem;
+}
+input:focus, textarea:focus, select:focus {
+  outline:1px solid var(--accent); border-color:var(--accent);
+}
+/* Visible keyboard focus */
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+.primary {
+  background:var(--accent);
+  color:#06202a; /* readable on accent */
+  border:0; font-weight:600; padding:.7rem 1.1rem;
+}
+.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* Make disabled inputs look disabled */
+input:disabled, textarea:disabled, select:disabled, button:disabled {
+  filter: saturate(0.6) opacity(0.85);
+}
+
+.kpis { display:grid; grid-template-columns: repeat(2,1fr); gap:12px; margin:.5rem 0 1rem; }
+.kpi { background:var(--card); border:1px solid #0002; border-radius:12px; padding:1rem; text-align:center; }
+.kpi-value { font-size:1.6rem; font-weight:700; }
+.kpi-label { color:var(--muted); font-size:.9rem; }
+
+.status { margin-left:.75rem; color:var(--muted); }
+.datetime { display:flex; gap:.5rem; align-items:center; }
+
+/* Theme toggle button */
+.theme-toggle {
+  margin-left:auto;
+  border:1px solid color-mix(in oklab, var(--text) 14%, transparent);
+  background:transparent;
+  color:var(--text);
+  padding:.4rem .6rem; border-radius:8px; cursor:pointer;
+  font-size:.9rem;
+}
+.theme-toggle:hover { border-color: var(--accent); }
+
+/* Visual hint when dark mode is active */
+.action-btn[aria-pressed="true"] {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+
+/* Header actions (icon + label) */
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: .4rem .6rem;
+  border-radius: 8px;
+  font-size: .9rem;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid color-mix(in oklab, var(--text) 14%, transparent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.action-btn:hover { border-color: var(--accent); }
+.action-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* (Optional) hide labels on very narrow screens */
+@media (max-width: 420px) {
+  .action-btn .label { display: none; }
+}
+
+@media (max-width:760px){
+  .grid, .grid-2 { grid-template-columns: 1fr; }
+  .row { flex-direction:column; align-items:flex-start; gap:.5rem; }
+}
+
+canvas { image-rendering: -webkit-optimize-contrast; }
