@@ -164,3 +164,59 @@ input:disabled, textarea:disabled, select:disabled, button:disabled {
 }
 
 canvas { image-rendering: -webkit-optimize-contrast; }
+
+.submit-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.submit-area .primary {
+  font-size: 1.2rem;
+  padding: 14px 36px;
+}
+
+.status {
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
+
+/* Reserve space so status messages don't resize the card */
+.submit-area .status {
+  min-height: 2.4em;   /* keeps one line of space even when empty */
+}
+
+#visitForm {
+  padding-bottom: 8px; /* small extra breathing room */
+}
+
+.time-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.use-now {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.use-now input[type="checkbox"] {
+  transform: scale(1.2);
+}
+
+.datetime {
+  display: flex;
+  gap: 10px;
+}
+
+.datetime input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -14,10 +14,6 @@
     <h1>Fab Lab Reykjavík Visitor Counter</h1>
 
     <nav class="header-actions">
-        <a href="dashboard.html" class="action-btn" title="Open public dashboard">
-        <span class="icon" aria-hidden="true">📊</span>
-        <span class="label">Public Dashboard</span>
-        </a>
 
         <button id="themeToggle" class="action-btn" aria-label="Toggle color theme" title="Toggle theme">
         <span class="icon" aria-hidden="true">🌙</span>
@@ -39,8 +35,10 @@
                 <option>Andri</option>
                 <option>Anna</option>
                 <option>Arnar</option>
+                <option>Elín</option>
                 <option>Hafey</option>
                 <option>Magnus</option>
+                <option>Unnar</option>
                 <option>Þóra</option>
             </select>
             </label>
@@ -51,23 +49,30 @@
               <input id="reason" list="reasonList" placeholder="Select or type">
             </label>
             <label>School (optional)
-              <input id="school" placeholder="e.g. LHÍ">
+              <input id="school" list="schoolList" placeholder="Select or type">
             </label>
           </div>
           <label>Notes (optional)
             <textarea id="notes" rows="3" placeholder="Anything notable..."></textarea>
           </label>
-          <div class="row">
-            <label><input type="checkbox" id="useNow" checked> Use current time</label>
+          <div class="time-section">
+            <div class="use-now">
+              <input type="checkbox" id="useNow" checked>
+              <label id="useNowLabel" for="useNow">Use current time</label>
+            </div>
+
             <div class="datetime">
               <input type="date" id="date">
               <input type="time" id="time" step="60">
             </div>
           </div>
-          <button id="saveBtn" class="primary">Add &amp; Save</button>
-          <span id="status" class="status"></span>
+          <div class="submit-area">
+            <button id="saveBtn" class="primary">Log a Visit</button>
+            <span id="status" class="status"></span>
+          </div>
         </form>
         <datalist id="reasonList"></datalist>
+        <datalist id="schoolList"></datalist>
         <datalist id="staffList"></datalist>
       </section>
 

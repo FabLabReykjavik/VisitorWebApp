@@ -1,8 +1,7 @@
 // service-worker.js
-const CACHE = "visitor-app-v6";
+const CACHE = "visitor-app-v7";
 const ASSETS = [
   "/", "/index.html",
-  "/dashboard.html",
   "/css/styles.css",
   "/js/app.js", "/js/api.js", "/js/db.js", "/js/charts.js",
   "/vendor/chart.umd.js", "/vendor/chartjs-plugin-datalabels.min.js",

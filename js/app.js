@@ -11,6 +11,7 @@
   const dateEl     = document.getElementById("date");
   const timeEl     = document.getElementById("time");
   const saveBtn    = document.getElementById("saveBtn");
+  const useNowLabel = document.getElementById("useNowLabel");
 
   // -------- State for de-duping clicks --------
   let isSaving = false;
@@ -24,6 +25,19 @@
     const mm = String(now.getMinutes()).padStart(2, "0");
     timeEl.value = `${hh}:${mm}`;
   }
+
+  // -----------Set status ---------------
+  function setStatus(msg, timeout = 3000) {
+  statusEl.textContent = msg;
+
+  if (timeout > 0) {
+    setTimeout(() => {
+      if (statusEl.textContent === msg) {
+        statusEl.textContent = "";
+      }
+    }, timeout);
+  }
+}
 
   // Monday (local), then Mon..Fri local Date objects
   function getWeekStartLocal(d = new Date()) {
@@ -54,16 +68,37 @@
 
   // -------- Init date/time controls --------
   setNow();
-  useNow.addEventListener("change", () => {
-    if (useNow.checked) setNow();
-    dateEl.disabled = timeEl.disabled = useNow.checked;
-  });
+  updateTimeMode();
 
-  // -------- Load meta (reasons) --------
-  api.getMeta().then(({ ok, reasons }) => {
-    if (!ok || !Array.isArray(reasons)) return;
+  // ✅ Apply initial disabled state on page load
+  dateEl.disabled = timeEl.disabled = useNow.checked;
+
+function updateTimeMode() {
+  if (useNow.checked) {
+    setNow();
+    useNowLabel.textContent = "Use current time";
+  } else {
+    useNowLabel.textContent = "Use custom time";
+  }
+
+  dateEl.disabled = timeEl.disabled = useNow.checked;
+}
+
+useNow.addEventListener("change", updateTimeMode);
+
+  // -------- Load meta (reasons) (schools) --------
+api.getMeta().then(({ ok, reasons, schools }) => {
+  if (!ok) return;
+
+  if (Array.isArray(reasons)) {
     reasonList.innerHTML = reasons.map(r => `<option value="${r}">`).join("");
-  });
+  }
+
+  if (Array.isArray(schools)) {
+    document.getElementById("schoolList").innerHTML =
+      schools.map(s => `<option value="${s}">`).join("");
+  }
+});
 
   // -------- Helpers: disable / enable whole form --------
   function disableForm(disabled) {
@@ -131,7 +166,7 @@
         }
       }
 
-      statusEl.textContent = anyUploaded ? "✅ Uploaded" : "💾 Saved locally (offline)";
+      setStatus(anyUploaded ? "✅ Uploaded" : "💾 Saved locally (offline)");
 
       // Reset light
       document.getElementById("guests").value = "1";
@@ -158,7 +193,7 @@
   async function flushQueue() {
     const remaining = await queueDB.flush(api.postVisit);
     queueEl.textContent = String(remaining);
-    if (remaining === 0) statusEl.textContent = "✅ Synced";
+    if (remaining === 0) setStatus("✅ Synced");
   }
 
   // -------- Util: object -> [labels, data] sorted by key --------
