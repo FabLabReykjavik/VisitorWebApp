@@ -1,3 +1,6 @@
+# App Screenshot
+![App Screenshot](/AppScreenshot.jpg)
+
 # Fab Lab Visitor Web App — Ultra-TL;DR Setup
 
 This is the shortest path for another lab to copy this repo and get their own instance running.
