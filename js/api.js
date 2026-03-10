@@ -1,7 +1,12 @@
 // js/api.js
 const api = (() => {
-  const base = () => (CONFIG.APPS_SCRIPT_BASE || "").replace(/\/$/, "");
-  const qjoin = (s) => (CONFIG.APPS_SCRIPT_BASE.includes("?") ? "&" : "?") + s;
+  function base() {
+    return String(CONFIG.APPS_SCRIPT_BASE || "").replace(/\/$/, "");
+  }
+
+  function qjoin(s) {
+    return base().includes("?") ? "&" + s : "?" + s;
+  }
 
   async function fetchJson(url, opts = {}) {
     try {
@@ -13,13 +18,21 @@ const api = (() => {
         credentials: "omit",
         ...opts,
       });
+
       let data;
-      try { data = await res.json(); }
-      catch { data = { ok:false, error:`Non-JSON (HTTP ${res.status})` }; }
-      if (!res.ok && data.ok === undefined) data = { ok:false, error:`HTTP ${res.status}` };
+      try {
+        data = await res.json();
+      } catch {
+        data = { ok: false, error: `Non-JSON (HTTP ${res.status})` };
+      }
+
+      if (!res.ok && data.ok === undefined) {
+        data = { ok: false, error: `HTTP ${res.status}` };
+      }
+
       return data;
     } catch (err) {
-      return { ok:false, error:String(err || "network error") };
+      return { ok: false, error: String(err || "network error") };
     }
   }
 
@@ -40,16 +53,35 @@ const api = (() => {
     return fetchJson(url, { method: "GET" });
   }
 
+  async function ping(opts = {}) {
+    // lightweight read to confirm Apps Script reachable
+    const url = base() + qjoin(withKey({ op: "meta" }));
+    return fetchJson(url, { method: "GET", ...opts });
+  }
+
   async function postVisit(ev) {
     // key in BODY; urlencoded; no custom headers => no preflight
     const form = new URLSearchParams();
+
     for (const [k, v] of Object.entries(ev || {})) {
-      if (v !== undefined && v !== null) form.append(k, String(v));
+      if (v !== undefined && v !== null && v !== "") {
+        form.append(k, String(v));
+      }
     }
+
     if (CONFIG.API_KEY) form.append("key", CONFIG.API_KEY);
     form.append("_", String(Date.now()));
-    return fetchJson(base(), { method: "POST", body: form });
+
+    return fetchJson(base(), {
+      method: "POST",
+      body: form
+    });
   }
 
-  return { getSummary, getMeta, postVisit };
+  return {
+    getSummary,
+    getMeta,
+    postVisit,
+    ping
+  };
 })();

@@ -10,27 +10,36 @@
   </head>
   <body>
     <header class="app-header">
-    <img src="assets/logo_small.png" alt="Fab Lab" class="logo">
-    <h1>Fab Lab Reykjavík Visitor Counter</h1>
+      <div class="brand">
+        <img src="assets/logo_small.png" alt="Fab Lab" class="logo">
+        <h1>Fab Lab Reykjavík Visitor Counter</h1>
+      </div>
 
-    <nav class="header-actions">
-
+      <nav class="header-actions">
         <button id="themeToggle" class="action-btn" aria-label="Toggle color theme" title="Toggle theme">
-        <span class="icon" aria-hidden="true">🌙</span>
-        <span class="label">Theme</span>
+          <span class="icon" aria-hidden="true">🌙</span>
+          <span class="label">Theme</span>
         </button>
 
-    </nav>
+        <a href="https://docs.google.com/spreadsheets/d/1_sbbG6tVaaBIF7GwPcbxxZ16phESD8sAKpWuIMDtG8U/edit?usp=sharing"
+          target="_blank"
+          class="action-btn"
+          title="Open visitor log in Google Sheets">
+          <img src="assets/Google_Sheets_logo.svg" alt="Google Sheets" class="icon">
+        </a>
+      </nav>
     </header>
 
     <main class="container">
-      <!-- Log Visit -->
+      <section class="card clock-card">
+        <div id="liveClock" class="clock-text"></div>
+      </section>
+
       <section class="card">
-        <h2>Log a Visit</h2>
         <form id="visitForm" autocomplete="off">
           <div class="grid">
             <label>Staff (optional)
-            <select id="staff">
+              <select id="staff">
                 <option value="">—</option>
                 <option>Andri</option>
                 <option>Anna</option>
@@ -40,49 +49,106 @@
                 <option>Magnus</option>
                 <option>Unnar</option>
                 <option>Þóra</option>
-            </select>
+              </select>
             </label>
+
             <label>Guests
               <input id="guests" type="number" min="1" value="1" required>
             </label>
-            <label>Reason (optional)
-              <input id="reason" list="reasonList" placeholder="Select or type">
-            </label>
+
             <label>School (optional)
               <input id="school" list="schoolList" placeholder="Select or type">
             </label>
           </div>
-          <label>Notes (optional)
-            <textarea id="notes" rows="3" placeholder="Anything notable..."></textarea>
-          </label>
+
+          <div class="category-section">
+            <div id="categoryHelp" class="category-help-text">
+              Choose Equipment or Visiting to load the correct category list.
+            </div>
+
+            <div class="category-toggle" role="group" aria-label="Choose category type">
+              <button
+                type="button"
+                id="machineModeBtn"
+                class="category-btn"
+                data-mode="machine"
+                aria-pressed="false"
+              >
+                <span class="btn-emoji" aria-hidden="true">🛠️</span>
+                <span>Equipment</span>
+              </button>
+
+              <button
+                type="button"
+                id="visitModeBtn"
+                class="category-btn"
+                data-mode="visit"
+                aria-pressed="false"
+              >
+                <span class="btn-emoji" aria-hidden="true">👥</span>
+                <span>Visiting</span>
+              </button>
+            </div>
+
+            <div class="category-picker-wrap">
+              <button
+                type="button"
+                id="categoryTrigger"
+                class="category-trigger"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-describedby="categoryHelp"
+                disabled
+              >
+                <span class="category-trigger-main" id="categoryTriggerMain">Pick a category</span>
+                <span class="category-trigger-sub" id="categoryTriggerSub">Choose Equipment or Visiting first</span>
+                <span class="category-trigger-chevron" aria-hidden="true">▾</span>
+              </button>
+
+              <div id="categoryMenu" class="category-menu" hidden>
+                <div id="categoryList" class="category-list" role="listbox" aria-label="Category options"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="notes-wrap">
+            <label>Notes (optional)
+              <textarea id="notes" rows="3" placeholder="Anything notable..."></textarea>
+            </label>
+          </div>
+
           <div class="time-section">
             <div class="use-now">
               <input type="checkbox" id="useNow" checked>
               <label id="useNowLabel" for="useNow">Use current time</label>
             </div>
 
-            <div class="datetime">
+            <div class="datetime" id="datetimeWrap">
               <input type="date" id="date">
               <input type="time" id="time" step="60">
             </div>
+
+            <div id="timeHelp" class="time-help" hidden>
+              Only use custom time if you are logging a past visit.
+            </div>
           </div>
+
           <div class="submit-area">
             <button id="saveBtn" class="primary">Log a Visit</button>
             <span id="status" class="status"></span>
+            <div id="lastLog" class="last-log"></div>
           </div>
         </form>
-        <datalist id="reasonList"></datalist>
+
         <datalist id="schoolList"></datalist>
         <datalist id="staffList"></datalist>
       </section>
 
-      <!-- KPIs -->
       <section class="kpis">
         <div class="kpi"><div class="kpi-value" id="todayTotal">0</div><div class="kpi-label">Today</div></div>
         <div class="kpi"><div class="kpi-value" id="queueCount">0</div><div class="kpi-label">Pending</div></div>
       </section>
 
-      <!-- Charts -->
       <section class="card">
         <h2>Visitors this week</h2>
         <canvas id="chartWeek"></canvas>
@@ -100,8 +166,8 @@
 
       <section class="card grid-2">
         <div>
-            <h2>Visitors by Weekday</h2>
-            <canvas id="chartWeekday"></canvas>
+          <h2>Visitors by Weekday</h2>
+          <canvas id="chartWeekday"></canvas>
         </div>
         <div>
           <h2>Visitors by Month</h2>
@@ -123,18 +189,19 @@
         <h2>Heatmap: Total Walk-ins - Hour × Weekday</h2>
         <div id="heatmapWalkins"></div>
       </section>
-
     </main>
 
-    <!-- Vendor libs first -->
+    <div id="cursorSpinner" aria-hidden="true">
+      <img src="assets/logo_small.png" alt="">
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <script src="vendor/chart.umd.js"></script>
     <script src="vendor/chartjs-plugin-datalabels.min.js"></script>
     <script src="vendor/plotly.min.js"></script>
     <script src="vendor/idb-keyval.js"></script>
 
-
-    <!-- App code (no inline scripts) -->
-    <script src="js/config.js"></script> <!-- copy from config.sample.js -->
+    <script src="js/config.js"></script>
     <script src="js/api.js"></script>
     <script src="js/db.js"></script>
     <script src="js/charts.js"></script>
