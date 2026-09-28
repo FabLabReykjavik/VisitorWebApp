@@ -1,44 +1,83 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
     <title>Fab Lab Reykjavík – Visitor Counter</title>
+
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="assets/logo_small.png">
     <link rel="stylesheet" href="css/styles.css">
   </head>
+
   <body>
     <header class="app-header">
       <div class="brand">
-        <img src="assets/logo_small.png" alt="Fab Lab" class="logo">
-        <h1>Fab Lab Reykjavík Visitor Counter</h1>
+        <img
+          src="assets/logo_small.png"
+          alt="Fab Lab"
+          class="logo"
+        >
+
+        <h1>
+          Fab Lab Reykjavík Visitor Counter
+        </h1>
       </div>
 
       <nav class="header-actions">
-        <button id="themeToggle" class="action-btn" aria-label="Toggle color theme" title="Toggle theme">
-          <span class="icon" aria-hidden="true">🌙</span>
-          <span class="label">Theme</span>
+        <button
+          id="themeToggle"
+          class="action-btn"
+          type="button"
+          aria-label="Toggle color theme"
+          title="Toggle theme"
+        >
+          <span
+            class="icon"
+            aria-hidden="true"
+          >🌙</span>
+
+          <span class="label">
+            Theme
+          </span>
         </button>
 
-        <a href="https://docs.google.com/spreadsheets/d/1_sbbG6tVaaBIF7GwPcbxxZ16phESD8sAKpWuIMDtG8U/edit?usp=sharing"
+        <a
+          href="https://docs.google.com/spreadsheets/d/1_sbbG6tVaaBIF7GwPcbxxZ16phESD8sAKpWuIMDtG8U/edit?usp=sharing"
           target="_blank"
+          rel="noopener noreferrer"
           class="action-btn"
-          title="Open visitor log in Google Sheets">
-          <img src="assets/Google_Sheets_logo.svg" alt="Google Sheets" class="icon">
+          title="Open visitor log in Google Sheets"
+        >
+          <img
+            src="assets/Google_Sheets_logo.svg"
+            alt="Google Sheets"
+            class="icon"
+          >
         </a>
       </nav>
     </header>
 
     <main class="container">
       <section class="card clock-card">
-        <div id="liveClock" class="clock-text"></div>
+        <div
+          id="liveClock"
+          class="clock-text"
+          role="status"
+          aria-live="polite"
+        ></div>
       </section>
 
       <section class="card">
-        <form id="visitForm" autocomplete="off">
+        <form
+          id="visitForm"
+          autocomplete="off"
+        >
           <div class="grid">
-            <label>Staff (optional)
+            <label>
+              Staff (optional)
+
               <select id="staff">
                 <option value="">—</option>
                 <option>Andri</option>
@@ -52,21 +91,42 @@
               </select>
             </label>
 
-            <label>Guests
-              <input id="guests" type="number" min="1" value="1" required>
+            <label>
+              Guests
+
+              <input
+                id="guests"
+                type="number"
+                min="1"
+                value="1"
+                required
+              >
             </label>
 
-            <label>School (optional)
-              <input id="school" list="schoolList" placeholder="Select or type">
+            <label>
+              School (optional)
+
+              <input
+                id="school"
+                list="schoolList"
+                placeholder="Select or type"
+              >
             </label>
           </div>
 
           <div class="category-section">
-            <div id="categoryHelp" class="category-help-text">
+            <div
+              id="categoryHelp"
+              class="category-help-text"
+            >
               Choose Equipment or Visiting to load the correct category list.
             </div>
 
-            <div class="category-toggle" role="group" aria-label="Choose category type">
+            <div
+              class="category-toggle"
+              role="group"
+              aria-label="Choose category type"
+            >
               <button
                 type="button"
                 id="machineModeBtn"
@@ -74,7 +134,11 @@
                 data-mode="machine"
                 aria-pressed="false"
               >
-                <span class="btn-emoji" aria-hidden="true">🛠️</span>
+                <span
+                  class="btn-emoji"
+                  aria-hidden="true"
+                >🛠️</span>
+
                 <span>Equipment</span>
               </button>
 
@@ -85,7 +149,11 @@
                 data-mode="visit"
                 aria-pressed="false"
               >
-                <span class="btn-emoji" aria-hidden="true">👥</span>
+                <span
+                  class="btn-emoji"
+                  aria-hidden="true"
+                >👥</span>
+
                 <span>Visiting</span>
               </button>
             </div>
@@ -100,43 +168,114 @@
                 aria-describedby="categoryHelp"
                 disabled
               >
-                <span class="category-trigger-main" id="categoryTriggerMain">Pick a category</span>
-                <span class="category-trigger-sub" id="categoryTriggerSub">Choose Equipment or Visiting first</span>
-                <span class="category-trigger-chevron" aria-hidden="true">▾</span>
+                <span
+                  class="category-trigger-main"
+                  id="categoryTriggerMain"
+                >
+                  Pick a category
+                </span>
+
+                <span
+                  class="category-trigger-sub"
+                  id="categoryTriggerSub"
+                >
+                  Choose Equipment or Visiting first
+                </span>
+
+                <span
+                  class="category-trigger-chevron"
+                  aria-hidden="true"
+                >▾</span>
               </button>
 
-              <div id="categoryMenu" class="category-menu" hidden>
-                <div id="categoryList" class="category-list" role="listbox" aria-label="Category options"></div>
+              <div
+                id="categoryMenu"
+                class="category-menu"
+                hidden
+              >
+                <div
+                  id="categoryList"
+                  class="category-list"
+                  role="listbox"
+                  aria-label="Category options"
+                ></div>
               </div>
             </div>
           </div>
 
           <div class="notes-wrap">
-            <label>Notes (optional)
-              <textarea id="notes" rows="3" placeholder="Anything notable..."></textarea>
+            <label>
+              Notes (optional)
+
+              <textarea
+                id="notes"
+                rows="3"
+                placeholder="Anything notable..."
+              ></textarea>
             </label>
           </div>
 
           <div class="time-section">
             <div class="use-now">
-              <input type="checkbox" id="useNow" checked>
-              <label id="useNowLabel" for="useNow">Use current time</label>
+              <input
+                type="checkbox"
+                id="useNow"
+                checked
+              >
+
+              <label
+                id="useNowLabel"
+                for="useNow"
+              >
+                Use current time
+              </label>
             </div>
 
-            <div class="datetime" id="datetimeWrap">
-              <input type="date" id="date">
-              <input type="time" id="time" step="60">
+            <div
+              class="datetime"
+              id="datetimeWrap"
+            >
+              <input
+                type="date"
+                id="date"
+              >
+
+              <input
+                type="time"
+                id="time"
+                step="60"
+              >
             </div>
 
-            <div id="timeHelp" class="time-help" hidden>
+            <div
+              id="timeHelp"
+              class="time-help"
+              hidden
+            >
               Only use custom time if you are logging a past visit.
             </div>
           </div>
 
           <div class="submit-area">
-            <button id="saveBtn" class="primary">Log a Visit</button>
-            <span id="status" class="status"></span>
-            <div id="lastLog" class="last-log"></div>
+            <button
+              id="saveBtn"
+              class="primary"
+              type="submit"
+            >
+              Log a Visit
+            </button>
+
+            <span
+              id="status"
+              class="status"
+              role="status"
+              aria-live="polite"
+            ></span>
+
+            <div
+              id="lastLog"
+              class="last-log"
+            ></div>
           </div>
         </form>
 
@@ -145,8 +284,27 @@
       </section>
 
       <section class="kpis">
-        <div class="kpi"><div class="kpi-value" id="todayTotal">0</div><div class="kpi-label">Today</div></div>
-        <div class="kpi"><div class="kpi-value" id="queueCount">0</div><div class="kpi-label">Pending</div></div>
+        <div class="kpi">
+          <div
+            class="kpi-value"
+            id="todayTotal"
+          >0</div>
+
+          <div class="kpi-label">
+            Today
+          </div>
+        </div>
+
+        <div class="kpi">
+          <div
+            class="kpi-value"
+            id="queueCount"
+          >0</div>
+
+          <div class="kpi-label">
+            Pending
+          </div>
+        </div>
       </section>
 
       <section class="card">
@@ -163,44 +321,26 @@
         <h2>Most Popular Machines</h2>
         <canvas id="chartMachines"></canvas>
       </section>
-
-      <section class="card grid-2">
-        <div>
-          <h2>Visitors by Weekday</h2>
-          <canvas id="chartWeekday"></canvas>
-        </div>
-        <div>
-          <h2>Visitors by Month</h2>
-          <canvas id="chartMonth" height="160"></canvas>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Visitors by School</h2>
-        <canvas id="chartSchool" height="160"></canvas>
-      </section>
-
-      <section class="card">
-        <h2>Heatmap: Total visitors - Hour × Weekday</h2>
-        <div id="heatmap"></div>
-      </section>
-
-      <section class="card">
-        <h2>Heatmap: Total Walk-ins - Hour × Weekday</h2>
-        <div id="heatmapWalkins"></div>
-      </section>
     </main>
 
-    <div id="cursorSpinner" aria-hidden="true">
-      <img src="assets/logo_small.png" alt="">
+    <div
+      id="cursorSpinner"
+      aria-hidden="true"
+    >
+      <img
+        src="assets/logo_small.png"
+        alt=""
+      >
     </div>
 
+    <!-- Celebration is optional and may be unavailable while offline. -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
     <script src="vendor/chart.umd.js"></script>
     <script src="vendor/chartjs-plugin-datalabels.min.js"></script>
-    <script src="vendor/plotly.min.js"></script>
     <script src="vendor/idb-keyval.js"></script>
 
+    <!-- Application order is intentional: dependencies first, app last. -->
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
     <script src="js/db.js"></script>

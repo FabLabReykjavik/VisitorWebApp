@@ -3,42 +3,59 @@
   // ============================================================
   // DOM references
   // ============================================================
-  const form          = document.getElementById("visitForm");
-  const statusEl      = document.getElementById("status");
-  const lastLogEl     = document.getElementById("lastLog");
+  const form = document.getElementById("visitForm");
+  const statusEl = document.getElementById("status");
+  const lastLogEl = document.getElementById("lastLog");
 
-  const todayEl       = document.getElementById("todayTotal");
-  const queueEl       = document.getElementById("queueCount");
+  const todayEl = document.getElementById("todayTotal");
+  const queueEl = document.getElementById("queueCount");
 
-  const staffList     = document.getElementById("staffList"); // reserved for future use
+  const staffList = document.getElementById("staffList");
 
-  const guestsEl      = document.getElementById("guests");
-  const useNow        = document.getElementById("useNow");
-  const useNowLabel   = document.getElementById("useNowLabel");
-  const dateEl        = document.getElementById("date");
-  const timeEl        = document.getElementById("time");
+  const guestsEl = document.getElementById("guests");
+  const useNow = document.getElementById("useNow");
+  const useNowLabel = document.getElementById("useNowLabel");
+  const dateEl = document.getElementById("date");
+  const timeEl = document.getElementById("time");
 
-  const datetimeWrap  = document.getElementById("datetimeWrap");
-  const timeHelpEl    = document.getElementById("timeHelp");
+  const datetimeWrap = document.getElementById("datetimeWrap");
+  const timeHelpEl = document.getElementById("timeHelp");
 
-  const saveBtn       = document.getElementById("saveBtn");
-  const liveClock     = document.getElementById("liveClock");
+  const saveBtn = document.getElementById("saveBtn");
+  const liveClock = document.getElementById("liveClock");
 
-  const machineModeBtn = document.getElementById("machineModeBtn");
-  const visitModeBtn   = document.getElementById("visitModeBtn");
+  const machineModeBtn =
+    document.getElementById("machineModeBtn");
 
-  const categoryTrigger = document.getElementById("categoryTrigger");
-  const categoryTriggerMain = document.getElementById("categoryTriggerMain");
-  const categoryTriggerSub = document.getElementById("categoryTriggerSub");
-  const categoryMenu = document.getElementById("categoryMenu");
-  const categoryListEl = document.getElementById("categoryList");
+  const visitModeBtn =
+    document.getElementById("visitModeBtn");
 
-  const logoEl = document.querySelector(".logo");
-  const cursorSpinnerEl = document.getElementById("cursorSpinner");
-  const staffEl = document.getElementById("staff");
+  const categoryTrigger =
+    document.getElementById("categoryTrigger");
+
+  const categoryTriggerMain =
+    document.getElementById("categoryTriggerMain");
+
+  const categoryTriggerSub =
+    document.getElementById("categoryTriggerSub");
+
+  const categoryMenu =
+    document.getElementById("categoryMenu");
+
+  const categoryListEl =
+    document.getElementById("categoryList");
+
+  const logoEl =
+    document.querySelector(".logo");
+
+  const cursorSpinnerEl =
+    document.getElementById("cursorSpinner");
+
+  const staffEl =
+    document.getElementById("staff");
 
   // ============================================================
-  // Static category definitions (display + stored value)
+  // Static category definitions
   // ============================================================
   const VISIT_OPTIONS = [
     {
@@ -166,62 +183,111 @@
     }
   ];
 
-  const MACHINE_REASON_SET = new Set(MACHINE_OPTIONS.map(o => o.value));
+  const MACHINE_REASON_SET =
+    new Set(
+      MACHINE_OPTIONS.map(
+        option => option.value
+      )
+    );
 
   // ============================================================
   // Local state
   // ============================================================
   let isSaving = false;
+  let isFlushing = false;
   let lastSubmitAt = 0;
   let currentRefreshAbort = null;
   let pendingCount = 0;
 
-  let backendOnline = true;
+  // null = checking
+  // true = backend confirmed
+  // false = backend unavailable
+  //
+  // This state is deliberately independent of chart loading.
+  let backendOnline = null;
   let pingFails = 0;
-  const PING_FAILS_TO_OFFLINE = 2;
-  const PING_TIMEOUT_MS = 8000;
-  const PING_INTERVAL_MS = 10000;
 
-  let currentReasonType = ""; // "", "visit", "machine"
-  let selectedCategory = null; // { value, title, description } | null
+  const PING_FAILS_TO_OFFLINE = 3;
+  const PING_INTERVAL_MS = 30000;
+
+  let currentReasonType = "";
+  let selectedCategory = null;
 
   // ============================================================
   // Small UI helpers
   // ============================================================
   function setNow() {
     const now = new Date();
-    dateEl.value = now.toISOString().slice(0, 10);
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    timeEl.value = `${hh}:${mm}`;
+
+    dateEl.value =
+      now.toISOString().slice(0, 10);
+
+    const hours =
+      String(now.getHours())
+        .padStart(2, "0");
+
+    const minutes =
+      String(now.getMinutes())
+        .padStart(2, "0");
+
+    timeEl.value =
+      `${hours}:${minutes}`;
   }
 
   function disableForm(disabled) {
-    for (const el of form.querySelectorAll("input, select, textarea, button")) {
-      el.disabled = !!disabled;
+    for (
+      const element of
+      form.querySelectorAll(
+        "input, select, textarea, button"
+      )
+    ) {
+      element.disabled =
+        Boolean(disabled);
     }
   }
 
-  function setStatus(msg, timeout = 3000) {
-    statusEl.textContent = msg;
+  function setStatus(
+    message,
+    timeout = 3000
+  ) {
+    statusEl.textContent = message;
+
     if (timeout > 0) {
       setTimeout(() => {
-        if (statusEl.textContent === msg) statusEl.textContent = "";
+        if (
+          statusEl.textContent ===
+          message
+        ) {
+          statusEl.textContent = "";
+        }
       }, timeout);
     }
   }
 
-  function showLastLog(text, timeout = 5000) {
-    if (!lastLogEl) return;
+  function showLastLog(
+    text,
+    timeout = 5000
+  ) {
+    if (!lastLogEl) {
+      return;
+    }
 
     lastLogEl.textContent = text;
     lastLogEl.classList.add("show");
 
     if (timeout > 0) {
       setTimeout(() => {
-        if (lastLogEl.textContent === text) {
-          lastLogEl.classList.remove("show");
-          setTimeout(() => { lastLogEl.textContent = ""; }, 250);
+        if (
+          lastLogEl.textContent ===
+          text
+        ) {
+          lastLogEl.classList.remove(
+            "show"
+          );
+
+          setTimeout(() => {
+            lastLogEl.textContent = "";
+          }, 250);
         }
       }, timeout);
     }
@@ -230,67 +296,143 @@
   let loadingLoopTimer = null;
 
   function startButtonLoadingBar_() {
-    if (!saveBtn) return;
+    if (!saveBtn) {
+      return;
+    }
 
-    saveBtn.classList.add("is-loading");
-    if (logoEl) logoEl.classList.add("is-spinning");
+    saveBtn.classList.add(
+      "is-loading"
+    );
+
+    if (logoEl) {
+      logoEl.classList.add(
+        "is-spinning"
+      );
+    }
+
     enableFakeCursor_();
 
     const restart = () => {
-      if (!isSaving) return;
+      if (!isSaving) {
+        return;
+      }
 
-      saveBtn.classList.remove("is-loading");
+      saveBtn.classList.remove(
+        "is-loading"
+      );
+
       void saveBtn.offsetWidth;
-      saveBtn.classList.add("is-loading");
 
-      loadingLoopTimer = setTimeout(restart, 10000);
+      saveBtn.classList.add(
+        "is-loading"
+      );
+
+      loadingLoopTimer =
+        setTimeout(
+          restart,
+          10000
+        );
     };
 
-    loadingLoopTimer = setTimeout(restart, 10000);
+    loadingLoopTimer =
+      setTimeout(
+        restart,
+        10000
+      );
   }
 
   function stopButtonLoadingBar_() {
-    if (!saveBtn) return;
+    if (!saveBtn) {
+      return;
+    }
 
-    saveBtn.classList.remove("is-loading");
-    if (logoEl) logoEl.classList.remove("is-spinning");
+    saveBtn.classList.remove(
+      "is-loading"
+    );
+
+    if (logoEl) {
+      logoEl.classList.remove(
+        "is-spinning"
+      );
+    }
+
     disableFakeCursor_();
 
     if (loadingLoopTimer) {
-      clearTimeout(loadingLoopTimer);
+      clearTimeout(
+        loadingLoopTimer
+      );
+
       loadingLoopTimer = null;
     }
   }
 
   function successPop() {
-    if (!saveBtn) return;
-    saveBtn.classList.remove("success-pop");
+    if (!saveBtn) {
+      return;
+    }
+
+    saveBtn.classList.remove(
+      "success-pop"
+    );
+
     void saveBtn.offsetWidth;
-    saveBtn.classList.add("success-pop");
+
+    saveBtn.classList.add(
+      "success-pop"
+    );
   }
 
-  function updateFakeCursor_(x, y) {
-    if (!cursorSpinnerEl) return;
-    cursorSpinnerEl.style.left = `${x}px`;
-    cursorSpinnerEl.style.top = `${y}px`;
+  function updateFakeCursor_(
+    x,
+    y
+  ) {
+    if (!cursorSpinnerEl) {
+      return;
+    }
+
+    cursorSpinnerEl.style.left =
+      `${x}px`;
+
+    cursorSpinnerEl.style.top =
+      `${y}px`;
   }
 
   function enableFakeCursor_() {
-    document.documentElement.classList.add("saving-cursor");
-    if (cursorSpinnerEl) cursorSpinnerEl.hidden = false;
+    document.documentElement
+      .classList.add(
+        "saving-cursor"
+      );
+
+    if (cursorSpinnerEl) {
+      cursorSpinnerEl.hidden = false;
+    }
   }
 
   function disableFakeCursor_() {
-    document.documentElement.classList.remove("saving-cursor");
-    if (cursorSpinnerEl) cursorSpinnerEl.hidden = true;
+    document.documentElement
+      .classList.remove(
+        "saving-cursor"
+      );
+
+    if (cursorSpinnerEl) {
+      cursorSpinnerEl.hidden = true;
+    }
   }
 
-  function focusStaffSoon_(delay = 30) {
-    if (!staffEl) return;
+  function focusStaffSoon_(
+    delay = 30
+  ) {
+    if (!staffEl) {
+      return;
+    }
+
     setTimeout(() => {
       try {
         staffEl.focus();
-      } catch (_) {}
+      } catch (_) {
+        // Focus failure is harmless.
+      }
     }, delay);
   }
 
@@ -298,47 +440,120 @@
   // Celebration
   // ============================================================
   function milestoneStorageKey_() {
-    return `fablab_last_milestone_${new Date().getFullYear()}`;
+    return (
+      `fablab_last_milestone_` +
+      new Date().getFullYear()
+    );
   }
 
-  function isMilestone_(n) {
-    const v = Number(n);
-    return Number.isFinite(v) && v > 0 && v % 1000 === 0;
+  function isMilestone_(number) {
+    const value = Number(number);
+
+    return (
+      Number.isFinite(value) &&
+      value > 0 &&
+      value % 1000 === 0
+    );
   }
 
-  function maybeCelebrateYearMilestone_(yearTotal) {
-    const n = Number(yearTotal || 0);
-    if (!isMilestone_(n)) return;
+  function maybeCelebrateYearMilestone_(
+    yearTotal
+  ) {
+    const number =
+      Number(yearTotal || 0);
 
-    const key = milestoneStorageKey_();
-    const last = Number(localStorage.getItem(key) || "0");
-    if (last === n) return;
+    if (!isMilestone_(number)) {
+      return;
+    }
 
-    localStorage.setItem(key, String(n));
-    celebrate_(n);
+    const key =
+      milestoneStorageKey_();
+
+    const last =
+      Number(
+        localStorage.getItem(key) ||
+        "0"
+      );
+
+    if (last === number) {
+      return;
+    }
+
+    localStorage.setItem(
+      key,
+      String(number)
+    );
+
+    celebrate_(number);
   }
 
   function celebrate_(yearTotal) {
-    const overlay = document.createElement("div");
-    overlay.className = "celebration-overlay";
+    const overlay =
+      document.createElement("div");
+
+    overlay.className =
+      "celebration-overlay";
+
     overlay.innerHTML = `
-      <div class="celebration-box" role="dialog" aria-live="polite">
+      <div
+        class="celebration-box"
+        role="dialog"
+        aria-live="polite"
+      >
         🎉 Congratulations!<br>
-        You are visitor <b>#${yearTotal}</b> of ${new Date().getFullYear()}!
-        <div class="celebration-sub">Fab Lab Reykjavík</div>
-        <div class="celebration-hint">Tap anywhere to close</div>
+        You are visitor
+        <b>#${yearTotal}</b>
+        of ${new Date().getFullYear()}!
+
+        <div class="celebration-sub">
+          Fab Lab Reykjavík
+        </div>
+
+        <div class="celebration-hint">
+          Tap anywhere to close
+        </div>
       </div>
     `;
-    document.body.appendChild(overlay);
 
-    if (typeof confetti === "function") {
-      confetti({ particleCount: 220, spread: 120, origin: { y: 0.65 } });
-      setTimeout(() => confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } }), 250);
-      setTimeout(() => confetti({ particleCount: 110, spread: 70, origin: { y: 0.55 } }), 520);
+    document.body.appendChild(
+      overlay
+    );
+
+    if (
+      typeof confetti === "function"
+    ) {
+      confetti({
+        particleCount: 220,
+        spread: 120,
+        origin: { y: 0.65 }
+      });
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 140,
+          spread: 90,
+          origin: { y: 0.6 }
+        });
+      }, 250);
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 110,
+          spread: 70,
+          origin: { y: 0.55 }
+        });
+      }, 520);
     }
 
-    const close = () => overlay.remove();
-    overlay.addEventListener("click", close);
+    const close = () => {
+      overlay.remove();
+    };
+
+    overlay.addEventListener(
+      "click",
+      close
+    );
+
     setTimeout(close, 5500);
   }
 
@@ -346,108 +561,229 @@
   // Time mode UX
   // ============================================================
   function updateTimeMode() {
-    const custom = !useNow.checked;
+    const custom =
+      !useNow.checked;
 
     if (useNow.checked) {
       setNow();
-      if (useNowLabel) useNowLabel.textContent = "Use current time";
-    } else {
-      if (useNowLabel) useNowLabel.textContent = "Use custom time";
+
+      if (useNowLabel) {
+        useNowLabel.textContent =
+          "Use current time";
+      }
+    } else if (useNowLabel) {
+      useNowLabel.textContent =
+        "Use custom time";
     }
 
-    dateEl.disabled = timeEl.disabled = useNow.checked;
+    dateEl.disabled =
+      timeEl.disabled =
+        useNow.checked;
 
-    if (timeHelpEl) timeHelpEl.hidden = !custom;
-    if (datetimeWrap) datetimeWrap.classList.toggle("custom-time", custom);
+    if (timeHelpEl) {
+      timeHelpEl.hidden = !custom;
+    }
+
+    if (datetimeWrap) {
+      datetimeWrap.classList.toggle(
+        "custom-time",
+        custom
+      );
+    }
   }
 
   // ============================================================
   // Category UI
   // ============================================================
-  function setButtonState_(btn, active) {
-    if (!btn) return;
-    btn.classList.toggle("active", !!active);
-    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  function setButtonState_(
+    button,
+    active
+  ) {
+    if (!button) {
+      return;
+    }
+
+    button.classList.toggle(
+      "active",
+      Boolean(active)
+    );
+
+    button.setAttribute(
+      "aria-pressed",
+      active ? "true" : "false"
+    );
   }
 
   function getCurrentOptions_() {
-    if (currentReasonType === "visit") return VISIT_OPTIONS;
-    if (currentReasonType === "machine") return MACHINE_OPTIONS;
+    if (
+      currentReasonType === "visit"
+    ) {
+      return VISIT_OPTIONS;
+    }
+
+    if (
+      currentReasonType === "machine"
+    ) {
+      return MACHINE_OPTIONS;
+    }
+
     return [];
   }
 
   function closeCategoryMenu_() {
-    if (!categoryMenu || !categoryTrigger) return;
+    if (
+      !categoryMenu ||
+      !categoryTrigger
+    ) {
+      return;
+    }
+
     categoryMenu.hidden = true;
-    categoryTrigger.setAttribute("aria-expanded", "false");
+
+    categoryTrigger.setAttribute(
+      "aria-expanded",
+      "false"
+    );
   }
 
   function openCategoryMenu_() {
-    if (!categoryMenu || !categoryTrigger || categoryTrigger.disabled) return;
+    if (
+      !categoryMenu ||
+      !categoryTrigger ||
+      categoryTrigger.disabled
+    ) {
+      return;
+    }
+
     renderCategoryOptions_();
+
     categoryMenu.hidden = false;
-    categoryTrigger.setAttribute("aria-expanded", "true");
+
+    categoryTrigger.setAttribute(
+      "aria-expanded",
+      "true"
+    );
   }
 
   function toggleCategoryMenu_() {
-    if (categoryMenu.hidden) openCategoryMenu_();
-    else closeCategoryMenu_();
+    if (categoryMenu.hidden) {
+      openCategoryMenu_();
+    } else {
+      closeCategoryMenu_();
+    }
   }
 
   function updateCategoryTrigger_() {
-    if (!categoryTrigger) return;
+    if (!categoryTrigger) {
+      return;
+    }
 
     if (!currentReasonType) {
       categoryTrigger.disabled = true;
-      categoryTriggerMain.textContent = "Pick a category";
-      categoryTriggerSub.textContent = "Choose Equipment or Visiting first";
+
+      categoryTriggerMain.textContent =
+        "Pick a category";
+
+      categoryTriggerSub.textContent =
+        "Choose Equipment or Visiting first";
+
       return;
     }
 
     categoryTrigger.disabled = false;
 
     if (selectedCategory) {
-      categoryTriggerMain.textContent = selectedCategory.title;
-      categoryTriggerSub.textContent = selectedCategory.description;
+      categoryTriggerMain.textContent =
+        selectedCategory.title;
+
+      categoryTriggerSub.textContent =
+        selectedCategory.description;
     } else {
-      categoryTriggerMain.textContent = "Pick a category";
-      categoryTriggerSub.textContent = currentReasonType === "visit"
-        ? "Choose a visit reason"
-        : "Choose a machine or area";
+      categoryTriggerMain.textContent =
+        "Pick a category";
+
+      categoryTriggerSub.textContent =
+        currentReasonType === "visit"
+          ? "Choose a visit reason"
+          : "Choose a machine or area";
     }
   }
 
   function renderCategoryOptions_() {
-    if (!categoryListEl) return;
+    if (!categoryListEl) {
+      return;
+    }
 
-    const options = getCurrentOptions_();
+    const options =
+      getCurrentOptions_();
 
-    categoryListEl.innerHTML = options.map((opt) => {
-      const selected = selectedCategory && selectedCategory.value === opt.value;
-      return `
-        <button
-          type="button"
-          class="category-option${selected ? " is-selected" : ""}"
-          data-value="${escapeHtml_(opt.value)}"
-          role="option"
-          aria-selected="${selected ? "true" : "false"}"
-        >
-          <span class="category-option-title">${escapeHtml_(opt.title)}</span>
-          <span class="category-option-desc">${escapeHtml_(opt.description)}</span>
-        </button>
-      `;
-    }).join("");
+    categoryListEl.innerHTML =
+      options.map(option => {
+        const selected =
+          selectedCategory &&
+          selectedCategory.value ===
+            option.value;
+
+        return `
+          <button
+            type="button"
+            class="category-option${
+              selected
+                ? " is-selected"
+                : ""
+            }"
+            data-value="${
+              escapeHtml_(option.value)
+            }"
+            role="option"
+            aria-selected="${
+              selected
+                ? "true"
+                : "false"
+            }"
+          >
+            <span class="category-option-title">
+              ${escapeHtml_(option.title)}
+            </span>
+
+            <span class="category-option-desc">
+              ${escapeHtml_(
+                option.description
+              )}
+            </span>
+          </button>
+        `;
+      }).join("");
   }
 
-  function setReasonType_(nextType) {
-    const normalized = (nextType === "machine" || nextType === "visit") ? nextType : "";
-    if (currentReasonType === normalized) return;
+  function setReasonType_(
+    nextType
+  ) {
+    const normalized =
+      nextType === "machine" ||
+      nextType === "visit"
+        ? nextType
+        : "";
+
+    if (
+      currentReasonType ===
+      normalized
+    ) {
+      return;
+    }
 
     currentReasonType = normalized;
     selectedCategory = null;
 
-    setButtonState_(machineModeBtn, currentReasonType === "machine");
-    setButtonState_(visitModeBtn, currentReasonType === "visit");
+    setButtonState_(
+      machineModeBtn,
+      currentReasonType === "machine"
+    );
+
+    setButtonState_(
+      visitModeBtn,
+      currentReasonType === "visit"
+    );
 
     closeCategoryMenu_();
     updateCategoryTrigger_();
@@ -457,29 +793,60 @@
     currentReasonType = "";
     selectedCategory = null;
 
-    setButtonState_(machineModeBtn, false);
-    setButtonState_(visitModeBtn, false);
+    setButtonState_(
+      machineModeBtn,
+      false
+    );
+
+    setButtonState_(
+      visitModeBtn,
+      false
+    );
 
     closeCategoryMenu_();
     updateCategoryTrigger_();
   }
 
-  function findOptionByValue_(value, type) {
-    const arr = type === "visit" ? VISIT_OPTIONS : type === "machine" ? MACHINE_OPTIONS : [];
-    return arr.find((x) => x.value === value) || null;
+  function findOptionByValue_(
+    value,
+    type
+  ) {
+    const options =
+      type === "visit"
+        ? VISIT_OPTIONS
+        : type === "machine"
+          ? MACHINE_OPTIONS
+          : [];
+
+    return (
+      options.find(
+        option =>
+          option.value === value
+      ) || null
+    );
   }
 
-  function isValidCategoryForCurrentMode_(value) {
-    return !!findOptionByValue_(value, currentReasonType);
+  function isValidCategoryForCurrentMode_(
+    value
+  ) {
+    return Boolean(
+      findOptionByValue_(
+        value,
+        currentReasonType
+      )
+    );
   }
 
   function getReasonLabelForLastLog_() {
-    if (!selectedCategory) return "—";
+    if (!selectedCategory) {
+      return "—";
+    }
+
     return selectedCategory.title;
   }
 
-  function escapeHtml_(s) {
-    return String(s)
+  function escapeHtml_(value) {
+    return String(value)
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
@@ -487,514 +854,1316 @@
   }
 
   // ============================================================
-  // Clock + connectivity
+  // Clock and connectivity
   // ============================================================
-  function formatClockLine(d) {
-    const weekday = d.toLocaleDateString(undefined, { weekday: "long" });
-    const month   = d.toLocaleDateString(undefined, { month: "long" });
-    const day     = d.getDate();
-    const year    = d.getFullYear();
-    const time    = d.toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false
-    });
-    return `${weekday}, ${day}. ${month}, ${year} - ${time}`;
+  function formatClockLine(date) {
+    const weekday =
+      date.toLocaleDateString(
+        undefined,
+        { weekday: "long" }
+      );
+
+    const month =
+      date.toLocaleDateString(
+        undefined,
+        { month: "long" }
+      );
+
+    const day =
+      date.getDate();
+
+    const year =
+      date.getFullYear();
+
+    const time =
+      date.toLocaleTimeString(
+        undefined,
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false
+        }
+      );
+
+    return (
+      `${weekday}, ${day}. ` +
+      `${month}, ${year} - ${time}`
+    );
   }
 
   function renderClock() {
-    if (!liveClock) return;
-
-    if (!backendOnline) {
-      liveClock.textContent = pendingCount > 0
-        ? `OFFLINE • Pending: ${pendingCount}`
-        : "OFFLINE";
-      liveClock.classList.add("offline");
+    if (!liveClock) {
       return;
     }
 
-    const base = formatClockLine(new Date());
-    liveClock.textContent = pendingCount > 0
-      ? `${base} • Pending: ${pendingCount}`
-      : base;
+    if (
+      navigator.onLine === false
+    ) {
+      liveClock.textContent =
+        pendingCount > 0
+          ? `NO INTERNET • ${pendingCount} saved locally • Will sync automatically`
+          : "NO INTERNET • New visits will be saved locally";
 
-    liveClock.classList.remove("offline");
+      liveClock.classList.add(
+        "offline"
+      );
+
+      return;
+    }
+
+    if (
+      backendOnline === false
+    ) {
+      const clock =
+        formatClockLine(new Date());
+
+      if (pendingCount > 0) {
+        liveClock.textContent =
+          `${clock} • ${pendingCount} saved locally • Waiting to sync`;
+
+        liveClock.classList.add(
+          "offline"
+        );
+      } else {
+        // A failed health check does not mean logging is broken. If nothing is
+        // pending, keep the banner calm and let the next check recover silently.
+        liveClock.textContent =
+          `${clock} • Logging ready`;
+
+        liveClock.classList.remove(
+          "offline"
+        );
+      }
+
+      return;
+    }
+
+    const clock =
+      formatClockLine(new Date());
+
+    if (
+      isFlushing &&
+      pendingCount > 0
+    ) {
+      liveClock.textContent =
+        `${clock} • Syncing ` +
+        `${pendingCount} saved locally`;
+    } else if (
+      pendingCount > 0
+    ) {
+      liveClock.textContent =
+        `${clock} • ${pendingCount} ` +
+        "saved locally • Waiting to sync";
+    } else if (
+      backendOnline === null
+    ) {
+      liveClock.textContent =
+        `${clock} • Checking connection…`;
+    } else {
+      liveClock.textContent =
+        `${clock} • All visits confirmed`;
+    }
+
+    liveClock.classList.remove(
+      "offline"
+    );
   }
 
   async function backendPingOnce() {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), PING_TIMEOUT_MS);
-
     try {
-      const res = await api.ping({ signal: ctrl.signal });
-      if (res && res.ok) {
+      const result =
+        await api.ping();
+
+      if (
+        result &&
+        result.ok
+      ) {
+        const recovered =
+          backendOnline === false;
+
         pingFails = 0;
         backendOnline = true;
-        return;
+
+        renderClock();
+
+        if (
+          (
+            recovered ||
+            pendingCount > 0
+          ) &&
+          !isFlushing
+        ) {
+          flushQueue({
+            announce: recovered
+          });
+        }
+
+        return true;
       }
+
       pingFails++;
     } catch {
       pingFails++;
-    } finally {
-      clearTimeout(t);
-      if (pingFails >= PING_FAILS_TO_OFFLINE) backendOnline = false;
     }
+
+    if (
+      pingFails >=
+      PING_FAILS_TO_OFFLINE
+    ) {
+      backendOnline = false;
+    }
+
+    renderClock();
+
+    return false;
   }
 
   function startBackendMonitor() {
-    backendPingOnce().then(renderClock);
+    backendPingOnce().then(
+      renderClock
+    );
 
     setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      backendPingOnce().then(renderClock);
+      if (
+        document.visibilityState !==
+        "visible"
+      ) {
+        return;
+      }
+
+      backendPingOnce().then(
+        renderClock
+      );
     }, PING_INTERVAL_MS);
 
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        backendPingOnce().then(renderClock);
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (
+          document.visibilityState ===
+          "visible"
+        ) {
+          backendPingOnce().then(
+            renderClock
+          );
+        }
       }
-    });
+    );
 
-    window.addEventListener("offline", () => {
-      backendOnline = false;
-      renderClock();
-    });
+    window.addEventListener(
+      "offline",
+      () => {
+        backendOnline = false;
+        renderClock();
+      }
+    );
 
-    window.addEventListener("online", () => {
-      backendPingOnce().then(renderClock);
-    });
+    window.addEventListener(
+      "online",
+      () => {
+        backendOnline = null;
+        renderClock();
+        backendPingOnce();
+      }
+    );
   }
 
   // ============================================================
-  // Backend-driven schools only
+  // Backend-driven schools
   // ============================================================
   function loadMetaIntoUI_(meta) {
-    if (!meta || !meta.ok) return;
-    const schools = Array.isArray(meta.schools) ? meta.schools : [];
-    const schoolList = document.getElementById("schoolList");
+    if (
+      !meta ||
+      !meta.ok
+    ) {
+      return;
+    }
+
+    const schools =
+      Array.isArray(meta.schools)
+        ? meta.schools
+        : [];
+
+    const schoolList =
+      document.getElementById(
+        "schoolList"
+      );
+
     if (schoolList) {
-      schoolList.innerHTML = schools.map(s => `<option value="${escapeHtml_(s)}">`).join("");
+      schoolList.innerHTML =
+        schools.map(school => {
+          return (
+            `<option value="` +
+            `${escapeHtml_(school)}">`
+          );
+        }).join("");
     }
   }
 
-  api.getMeta().then(loadMetaIntoUI_).catch(() => {});
+  api.getMeta()
+    .then(loadMetaIntoUI_)
+    .catch(() => {
+      // Metadata failure does not stop logging.
+    });
 
   // ============================================================
   // Queue helpers
   // ============================================================
   async function refreshQueueCount() {
-    const items = await queueDB.readAll();
-    pendingCount = items.length;
-    queueEl.textContent = String(pendingCount);
-    renderClock();
+    try {
+      pendingCount =
+        await queueDB.count();
+
+      if (queueEl) {
+        queueEl.textContent =
+          String(pendingCount);
+      }
+
+      renderClock();
+
+      return pendingCount;
+    } catch (error) {
+      console.error(
+        "Could not read the local visit queue",
+        error
+      );
+
+      setStatus(
+        "⚠️ Local storage could not be read. Please tell a staff member.",
+        0
+      );
+
+      return pendingCount;
+    }
   }
 
-  async function flushQueue() {
-    const remaining = await queueDB.flush(api.postVisit);
-    pendingCount = remaining;
-    queueEl.textContent = String(pendingCount);
+  async function flushQueue({
+    announce = false
+  } = {}) {
+    if (
+      isFlushing ||
+      navigator.onLine === false
+    ) {
+      return pendingCount;
+    }
+
+    const before =
+      await refreshQueueCount();
+
+    if (!before) {
+      return 0;
+    }
+
+    isFlushing = true;
     renderClock();
+
+    if (announce) {
+      setStatus(
+        `Uploading ${before} pending ` +
+        `visit${
+          before === 1
+            ? ""
+            : "s"
+        }…`,
+        0
+      );
+    }
+
+    let lastFailure = null;
+
+    try {
+      const remaining =
+        await queueDB.flushBatch(
+          async batch => {
+            const result =
+              await api.postVisits(
+                batch
+              );
+
+            if (
+              !result ||
+              !result.ok
+            ) {
+              lastFailure =
+                result || {
+                  error:
+                    "No server response",
+                  retryable: true
+                };
+            }
+
+            return result;
+          },
+          {
+            batchSize: 100,
+
+            onProgress({
+              attempted,
+              total,
+              confirmed
+            }) {
+              if (
+                announce ||
+                total > 1
+              ) {
+                setStatus(
+                  "Uploading visits… " +
+                  `${confirmed}/${total} ` +
+                  "confirmed",
+                  0
+                );
+              }
+            }
+          }
+        );
+
+      pendingCount = remaining;
+
+      if (queueEl) {
+        queueEl.textContent =
+          String(pendingCount);
+      }
+
+      if (remaining === 0) {
+        backendOnline = true;
+        pingFails = 0;
+
+        successPop();
+
+        setStatus(
+          `✅ Confirmed in Google Sheets: ${before} ` +
+          `visit${
+            before === 1
+              ? ""
+              : "s"
+          }`,
+          4500
+        );
+
+        // Refresh the visible statistics after the server confirms the upload.
+        // This same response also performs the milestone check, avoiding a
+        // second summary request.
+        setTimeout(
+          () => refreshSummary({
+            fresh: true
+          }),
+          0
+        );
+      } else if (
+        lastFailure &&
+        lastFailure.retryable === false
+      ) {
+        backendOnline = true;
+
+        setStatus(
+          "⚠️ Upload needs attention: " +
+          `${
+            lastFailure.error ||
+            "server rejected the upload"
+          }. ${remaining} safely pending.`,
+          0
+        );
+      } else {
+        // A delayed or uncertain upload is not proof that the backend is
+        // offline. Keep the records locally and let the health monitor decide.
+        backendOnline = null;
+
+        setStatus(
+          `💾 ${remaining} ` +
+          `visit${
+            remaining === 1
+              ? ""
+              : "s"
+          } saved locally • Waiting to sync automatically`,
+          6000
+        );
+      }
+
+      return remaining;
+    } catch (error) {
+      backendOnline = null;
+
+      await refreshQueueCount();
+
+      setStatus(
+        `💾 ${pendingCount} ` +
+        `visit${
+          pendingCount === 1
+            ? ""
+            : "s"
+        } saved locally • Waiting to sync automatically`,
+        6000
+      );
+
+      console.error(
+        "Background visit upload failed",
+        error
+      );
+
+      return pendingCount;
+    } finally {
+      isFlushing = false;
+      renderClock();
+    }
   }
 
   // ============================================================
   // Chart helpers
   // ============================================================
-  function getWeekStartLocal(d = new Date()) {
-    const day = d.getDay();
-    const diffFromMon = (day === 0 ? -6 : 1 - day);
-    const mon = new Date(d);
-    mon.setHours(0, 0, 0, 0);
-    mon.setDate(d.getDate() + diffFromMon);
-    return mon;
+  function getWeekStartLocal(
+    date = new Date()
+  ) {
+    const day =
+      date.getDay();
+
+    const differenceFromMonday =
+      day === 0
+        ? -6
+        : 1 - day;
+
+    const monday =
+      new Date(date);
+
+    monday.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    monday.setDate(
+      date.getDate() +
+      differenceFromMonday
+    );
+
+    return monday;
   }
 
-  function monToFriLocal(mon) {
-    return Array.from({ length: 5 }, (_, i) => {
-      const dt = new Date(mon);
-      dt.setDate(mon.getDate() + i);
-      dt.setHours(0, 0, 0, 0);
-      return dt;
-    });
+  function monToFriLocal(monday) {
+    return Array.from(
+      { length: 5 },
+      (_, index) => {
+        const date =
+          new Date(monday);
+
+        date.setDate(
+          monday.getDate() +
+          index
+        );
+
+        date.setHours(
+          0,
+          0,
+          0,
+          0
+        );
+
+        return date;
+      }
+    );
   }
 
   function ymdLocal(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    const year =
+      date.getFullYear();
+
+    const month =
+      String(
+        date.getMonth() + 1
+      ).padStart(2, "0");
+
+    const day =
+      String(
+        date.getDate()
+      ).padStart(2, "0");
+
+    return (
+      `${year}-${month}-${day}`
+    );
   }
 
   function labelDowMonDay(date) {
-    return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    return date.toLocaleDateString(
+      undefined,
+      {
+        weekday: "short",
+        month: "short",
+        day: "numeric"
+      }
+    );
   }
 
-  function toArray(obj) {
-    const entries = Object.entries(obj || {}).sort((a, b) => a[0].localeCompare(b[0]));
-    return [entries.map(e => e[0]), entries.map(e => e[1])];
+  function toArray(object) {
+    const entries =
+      Object.entries(object || {})
+        .sort(
+          (a, b) =>
+            a[0].localeCompare(b[0])
+        );
+
+    return [
+      entries.map(
+        entry => entry[0]
+      ),
+      entries.map(
+        entry => entry[1]
+      )
+    ];
   }
 
   // ============================================================
-  // Summary + charts
+  // Summary and retained charts
   // ============================================================
-  async function refreshSummary() {
-    if (currentRefreshAbort) currentRefreshAbort.abort();
-    const abortCtrl = new AbortController();
-    currentRefreshAbort = abortCtrl;
+  async function refreshSummary({
+    fresh = false
+  } = {}) {
+    if (currentRefreshAbort) {
+      currentRefreshAbort.abort();
+    }
 
-    const res = await api.getSummary();
-    if (!res.ok) return;
+    const abortController =
+      new AbortController();
 
-    backendOnline = true;
-    pingFails = 0;
-    renderClock();
+    currentRefreshAbort =
+      abortController;
 
-    todayEl.textContent = String(res.today_total ?? 0);
+    const result =
+      await api.getSummary({
+        fresh,
+        signal:
+          abortController.signal
+      });
 
+    if (!result.ok) {
+      if (
+        currentRefreshAbort ===
+        abortController
+      ) {
+        currentRefreshAbort = null;
+      }
+
+      return;
+    }
+
+    todayEl.textContent =
+      String(
+        result.today_total ?? 0
+      );
+
+    // Reuse this summary response for the milestone check. The older version
+    // issued a second identical summary request after each upload.
+    maybeCelebrateYearMilestone_(
+      result.year_total
+    );
+
+    // Visitors this week
     (function renderWeek() {
-      const mon = getWeekStartLocal(new Date());
-      const days = monToFriLocal(mon);
-      const labels = days.map(labelDowMonDay);
-      const keys = days.map(ymdLocal);
-      const counts = keys.map(k => Number((res.week_buckets || {})[k] || 0));
-      charts.bar("chartWeek", labels, counts, "Visitors this week");
+      const monday =
+        getWeekStartLocal(
+          new Date()
+        );
+
+      const days =
+        monToFriLocal(monday);
+
+      const labels =
+        days.map(
+          labelDowMonDay
+        );
+
+      const keys =
+        days.map(
+          ymdLocal
+        );
+
+      const counts =
+        keys.map(key => {
+          return Number(
+            (
+              result.week_buckets ||
+              {}
+            )[key] || 0
+          );
+        });
+
+      charts.bar(
+        "chartWeek",
+        labels,
+        counts,
+        "Visitors this week"
+      );
     })();
 
-    const [reasonLabels, reasonVals] = toArray(res.by_reason);
-    charts.bar("chartReason", reasonLabels, reasonVals, "Visitors by Reason");
+    // Visitors by reason
+    const [
+      reasonLabels,
+      reasonValues
+    ] = toArray(
+      result.by_reason
+    );
 
+    charts.bar(
+      "chartReason",
+      reasonLabels,
+      reasonValues,
+      "Visitors by Reason"
+    );
+
+    // Most popular machines
     const machines = {};
-    for (const [reason, count] of Object.entries(res.by_reason || {})) {
-      if (MACHINE_REASON_SET.has(reason)) machines[reason] = count;
+
+    for (
+      const [reason, count] of
+      Object.entries(
+        result.by_reason || {}
+      )
+    ) {
+      if (
+        MACHINE_REASON_SET.has(
+          reason
+        )
+      ) {
+        machines[reason] = count;
+      }
     }
-    const machinesSorted = Object.entries(machines).sort((a, b) => b[1] - a[1]);
+
+    const machinesSorted =
+      Object.entries(machines)
+        .sort(
+          (a, b) =>
+            b[1] - a[1]
+        );
+
     charts.pie(
       "chartMachines",
-      machinesSorted.map(([k]) => k),
-      machinesSorted.map(([, v]) => v),
+      machinesSorted.map(
+        ([key]) => key
+      ),
+      machinesSorted.map(
+        ([, value]) => value
+      ),
       "Most Popular Machines"
     );
 
-    (function renderWeekday() {
-      const wdOrder = ["1", "2", "3", "4", "5", "6", "7"];
-      const wdLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      const wdVals = wdOrder.map(k => res.by_weekday?.[k] || 0);
-      charts.bar("chartWeekday", wdLabels, wdVals, "Visitors by Weekday");
-    })();
-
-    (function renderMonth() {
-      const [mKeys, mVals] = toArray(res.by_month);
-      const mLabels = mKeys.map(k => {
-        const d = new Date(k);
-        return d.toLocaleString(undefined, { month: "long", year: "numeric" });
-      });
-      charts.bar("chartMonth", mLabels, mVals, "Visitors by Month");
-    })();
-
-    const [schoolLabels, schoolVals] = toArray(res.by_school);
-    charts.bar("chartSchool", schoolLabels, schoolVals, "Visitors by School");
-
-    (function renderHeatmapTotal() {
-      const hm = res.by_hour_weekday || {};
-      const hourLabels = Array.from({ length: 13 }, (_, i) => String(i + 9));
-      const weekdayKeys = ["1", "2", "3", "4", "5"];
-      const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-
-      const z = [];
-      for (let i = 0; i < weekdayKeys.length; i++) {
-        const wdKey = weekdayKeys[i];
-        const row = hm[wdKey] || {};
-        for (let h = 9; h <= 21; h++) {
-          z.push({ x: String(h), y: weekdayLabels[i], value: Number(row[h] || 0) });
-        }
-      }
-      charts.heatmap("heatmap", z, hourLabels, weekdayLabels);
-    })();
-
-    (function renderHeatmapWalkins() {
-      const hm = res.by_hour_weekday_walkin || {};
-      const hourLabels = Array.from({ length: 13 }, (_, i) => String(i + 9));
-      const weekdayKeys = ["1", "2", "3", "4", "5"];
-      const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-
-      const z = [];
-      for (let i = 0; i < weekdayKeys.length; i++) {
-        const wdKey = weekdayKeys[i];
-        const row = hm[wdKey] || {};
-        for (let h = 9; h <= 21; h++) {
-          z.push({ x: String(h), y: weekdayLabels[i], value: Number(row[h] || 0) });
-        }
-      }
-      charts.heatmap("heatmapWalkins", z, hourLabels, weekdayLabels);
-    })();
-
-    if (currentRefreshAbort === abortCtrl) currentRefreshAbort = null;
+    if (
+      currentRefreshAbort ===
+      abortController
+    ) {
+      currentRefreshAbort = null;
+    }
   }
 
   // ============================================================
-  // Form submit
+  // Form submission
   // ============================================================
-  saveBtn.addEventListener("mousedown", (e) => {
-    if (isSaving) {
-      e.preventDefault();
-      e.stopPropagation();
+  saveBtn.addEventListener(
+    "mousedown",
+    event => {
+      if (isSaving) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     }
-  });
+  );
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  form.addEventListener(
+    "submit",
+    async event => {
+      event.preventDefault();
 
-    const nowMs = Date.now();
-    if (nowMs - lastSubmitAt < 1500) return;
-    lastSubmitAt = nowMs;
+      const nowMilliseconds =
+        Date.now();
 
-    if (isSaving) return;
-    isSaving = true;
-
-    const originalBtnText = saveBtn.textContent;
-    disableForm(true);
-    saveBtn.textContent = "Saving…";
-    startButtonLoadingBar_();
-
-    let finalStatusMsg = "";
-
-    try {
-      const staff  = staffEl ? staffEl.value.trim() : "";
-      const guests = Math.max(1, parseInt(guestsEl?.value || "1", 10));
-      const reason = selectedCategory ? selectedCategory.value : "";
-      const reason_type = currentReasonType;
-      const school = document.getElementById("school").value.trim();
-      let notes    = document.getElementById("notes").value.trim();
-
-      if (reason && !reason_type) {
-        setStatus("Choose Equipment or Visiting first.", 3500);
+      if (
+        nowMilliseconds -
+          lastSubmitAt <
+        1500
+      ) {
         return;
       }
 
-      if (reason && !isValidCategoryForCurrentMode_(reason)) {
-        setStatus("Please choose a category from the selected list.", 3500);
+      lastSubmitAt =
+        nowMilliseconds;
+
+      if (isSaving) {
         return;
       }
 
-      if (!staff && !reason && !school && !notes) notes = "Button Press";
+      isSaving = true;
 
-      let ts;
-      if (!useNow.checked) {
-        const d = dateEl.value;
-        const t = timeEl.value || "00:00";
-        const local = new Date(`${d}T${t}:00`);
-        ts = new Date(local.getTime() - local.getTimezoneOffset() * 60000).toISOString();
-      }
+      const originalButtonText =
+        saveBtn.textContent;
 
-      const batchId = crypto.randomUUID();
-      const basePayload = {
-        ...(ts ? { ts } : {}),
-        staff_id: staff,
-        reason,
-        reason_type,
-        notes,
-        school
-      };
+      disableForm(true);
 
-      let anyUploaded = false;
+      saveBtn.textContent =
+        "Saving…";
 
-      for (let i = 0; i < guests; i++) {
-        const ev = { ...basePayload, event_id: crypto.randomUUID(), seq: `${batchId}:${i}` };
-        try {
-          const res = await api.postVisit(ev);
-          if (!res.ok) throw new Error(res.error || "post failed");
-          anyUploaded = true;
+      startButtonLoadingBar_();
 
-          backendOnline = true;
-          pingFails = 0;
-          renderClock();
-        } catch {
-          await queueDB.enqueue(ev);
+      try {
+        const staff =
+          staffEl
+            ? staffEl.value.trim()
+            : "";
+
+        const guests =
+          Math.max(
+            1,
+            parseInt(
+              guestsEl?.value || "1",
+              10
+            )
+          );
+
+        const reason =
+          selectedCategory
+            ? selectedCategory.value
+            : "";
+
+        const reasonType =
+          currentReasonType;
+
+        const school =
+          document
+            .getElementById("school")
+            .value
+            .trim();
+
+        let notes =
+          document
+            .getElementById("notes")
+            .value
+            .trim();
+
+        if (
+          reason &&
+          !reasonType
+        ) {
+          setStatus(
+            "Choose Equipment or Visiting first.",
+            3500
+          );
+
+          return;
         }
-      }
 
-      finalStatusMsg = anyUploaded ? "✅ Uploaded" : "💾 Saved locally (offline)";
+        if (
+          reason &&
+          !isValidCategoryForCurrentMode_(
+            reason
+          )
+        ) {
+          setStatus(
+            "Please choose a category from the selected list.",
+            3500
+          );
 
-      showLastLog(`Last log: ${guests} guest(s) • ${getReasonLabelForLastLog_()} • ${staff || "—"}`);
+          return;
+        }
 
-      if (guestsEl) guestsEl.value = "1";
-      document.getElementById("notes").value = "";
-      document.getElementById("school").value = "";
-      resetCategoryMode_();
-      if (useNow.checked) setNow();
+        if (
+          !staff &&
+          !reason &&
+          !school &&
+          !notes
+        ) {
+          notes = "Button Press";
+        }
 
-      refreshQueueCount();
-      setTimeout(refreshSummary, 0);
+        let capturedAt;
 
-      if (anyUploaded) {
-        setTimeout(async () => {
-          try {
-            const s = await api.getSummary();
-            if (s && s.ok) maybeCelebrateYearMilestone_(s.year_total);
-          } catch (_) {}
+        if (useNow.checked) {
+          capturedAt =
+            new Date();
+        } else {
+          const date =
+            dateEl.value;
+
+          const time =
+            timeEl.value ||
+            "00:00";
+
+          capturedAt =
+            new Date(
+              `${date}T${time}:00`
+            );
+        }
+
+        if (
+          !capturedAt ||
+          isNaN(
+            capturedAt.getTime()
+          )
+        ) {
+          setStatus(
+            "Please choose a valid date and time.",
+            3500
+          );
+
+          return;
+        }
+
+        // Capture the real visit time now. If the internet is unavailable for
+        // hours, the sheet will still show when the visit happened rather than
+        // when the pending record eventually uploaded.
+        const timestamp =
+          capturedAt.toISOString();
+
+        const batchId =
+          crypto.randomUUID();
+
+        const basePayload = {
+          ts: timestamp,
+          staff_id: staff,
+          reason,
+          reason_type: reasonType,
+          notes,
+          school
+        };
+
+        const events =
+          Array.from(
+            { length: guests },
+            (_, index) => ({
+              ...basePayload,
+              event_id:
+                crypto.randomUUID(),
+              seq:
+                `${batchId}:${index}`
+            })
+          );
+
+        // The form waits only for the local IndexedDB write. Every guest is
+        // stored atomically before any network request begins.
+        try {
+          pendingCount =
+            await queueDB.enqueueMany(
+              events
+            );
+        } catch (error) {
+          console.error(
+            "Could not save visits locally",
+            error
+          );
+
+          setStatus(
+            "⚠️ The visit was NOT saved. Local storage is unavailable; please try again or tell a staff member.",
+            0
+          );
+
+          return;
+        }
+
+        if (queueEl) {
+          queueEl.textContent =
+            String(pendingCount);
+        }
+
+        renderClock();
+
+        if (navigator.onLine === false) {
+          setStatus(
+            `💾 ${guests} ` +
+            `guest${guests === 1 ? "" : "s"} ` +
+            "saved locally • Will sync when internet returns",
+            6000
+          );
+        } else {
+          setStatus(
+            `💾 ${guests} ` +
+            `guest${guests === 1 ? "" : "s"} ` +
+            "saved locally • Syncing…",
+            0
+          );
+        }
+
+        showLastLog(
+          `Last log: ${guests} ` +
+          "guest(s) • " +
+          `${getReasonLabelForLastLog_()} • ` +
+          `${staff || "—"}`
+        );
+
+        if (guestsEl) {
+          guestsEl.value = "1";
+        }
+
+        document
+          .getElementById("notes")
+          .value = "";
+
+        document
+          .getElementById("school")
+          .value = "";
+
+        resetCategoryMode_();
+
+        if (useNow.checked) {
+          setNow();
+        }
+
+        // Upload only after the form has been cleared and released. Logging
+        // therefore remains fast even if Google or Apps Script is slow.
+        setTimeout(() => {
+          flushQueue({
+            announce: true
+          });
         }, 0);
+      } finally {
+        stopButtonLoadingBar_();
+
+        saveBtn.textContent =
+          originalButtonText;
+
+        disableForm(false);
+        updateCategoryTrigger_();
+
+        isSaving = false;
+
+        if (saveBtn) {
+          saveBtn.blur();
+        }
+
+        focusStaffSoon_(30);
       }
-
-      if (anyUploaded) successPop();
-
-      setStatus(finalStatusMsg);
-    } finally {
-      stopButtonLoadingBar_();
-      saveBtn.textContent = originalBtnText;
-      disableForm(false);
-      updateCategoryTrigger_();
-      isSaving = false;
-
-      if (saveBtn) saveBtn.blur();
-      focusStaffSoon_(30);
     }
-  });
+  );
 
   // ============================================================
   // Keyboard UX
   // ============================================================
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      const notesEl = document.getElementById("notes");
-      if (notesEl && document.activeElement === notesEl) {
-        notesEl.value = "";
-        e.preventDefault();
-        return;
+  document.addEventListener(
+    "keydown",
+    event => {
+      if (
+        event.key === "Escape"
+      ) {
+        const notesElement =
+          document.getElementById(
+            "notes"
+          );
+
+        if (
+          notesElement &&
+          document.activeElement ===
+            notesElement
+        ) {
+          notesElement.value = "";
+
+          event.preventDefault();
+
+          return;
+        }
+
+        closeCategoryMenu_();
       }
-      closeCategoryMenu_();
     }
-  });
+  );
 
   // ============================================================
   // Boot
   // ============================================================
   if (guestsEl) {
-    guestsEl.addEventListener("focus", () => guestsEl.select());
-    guestsEl.addEventListener("click", () => guestsEl.select());
+    guestsEl.addEventListener(
+      "focus",
+      () => guestsEl.select()
+    );
+
+    guestsEl.addEventListener(
+      "click",
+      () => guestsEl.select()
+    );
   }
 
   if (machineModeBtn) {
-    machineModeBtn.addEventListener("click", () => {
-      setReasonType_("machine");
-    });
+    machineModeBtn.addEventListener(
+      "click",
+      () => {
+        setReasonType_("machine");
+      }
+    );
   }
 
   if (visitModeBtn) {
-    visitModeBtn.addEventListener("click", () => {
-      setReasonType_("visit");
-    });
+    visitModeBtn.addEventListener(
+      "click",
+      () => {
+        setReasonType_("visit");
+      }
+    );
   }
 
   if (categoryTrigger) {
-    categoryTrigger.addEventListener("click", () => {
-      if (!currentReasonType) return;
-      toggleCategoryMenu_();
-    });
+    categoryTrigger.addEventListener(
+      "click",
+      () => {
+        if (!currentReasonType) {
+          return;
+        }
+
+        toggleCategoryMenu_();
+      }
+    );
   }
 
   if (categoryListEl) {
-    categoryListEl.addEventListener("click", (e) => {
-      const btn = e.target.closest(".category-option");
-      if (!btn) return;
+    categoryListEl.addEventListener(
+      "click",
+      event => {
+        const button =
+          event.target.closest(
+            ".category-option"
+          );
 
-      const value = btn.getAttribute("data-value");
-      const opt = findOptionByValue_(value, currentReasonType);
-      if (!opt) return;
+        if (!button) {
+          return;
+        }
 
-      selectedCategory = opt;
-      updateCategoryTrigger_();
-      closeCategoryMenu_();
-    });
+        const value =
+          button.getAttribute(
+            "data-value"
+          );
+
+        const option =
+          findOptionByValue_(
+            value,
+            currentReasonType
+          );
+
+        if (!option) {
+          return;
+        }
+
+        selectedCategory = option;
+
+        updateCategoryTrigger_();
+        closeCategoryMenu_();
+      }
+    );
   }
 
-  document.addEventListener("click", (e) => {
-    const insidePicker = e.target.closest(".category-picker-wrap");
-    const insideToggle = e.target.closest(".category-toggle");
-    if (!insidePicker && !insideToggle) {
-      closeCategoryMenu_();
+  document.addEventListener(
+    "click",
+    event => {
+      const insidePicker =
+        event.target.closest(
+          ".category-picker-wrap"
+        );
+
+      const insideToggle =
+        event.target.closest(
+          ".category-toggle"
+        );
+
+      if (
+        !insidePicker &&
+        !insideToggle
+      ) {
+        closeCategoryMenu_();
+      }
     }
-  });
+  );
 
-  document.addEventListener("mousemove", (e) => {
-    updateFakeCursor_(e.clientX, e.clientY);
-  });
+  document.addEventListener(
+    "mousemove",
+    event => {
+      updateFakeCursor_(
+        event.clientX,
+        event.clientY
+      );
+    }
+  );
 
-  document.addEventListener("mousedown", (e) => {
-    updateFakeCursor_(e.clientX, e.clientY);
-  });
+  document.addEventListener(
+    "mousedown",
+    event => {
+      updateFakeCursor_(
+        event.clientX,
+        event.clientY
+      );
+    }
+  );
 
   setNow();
   updateTimeMode();
-  useNow.addEventListener("change", updateTimeMode);
+
+  useNow.addEventListener(
+    "change",
+    updateTimeMode
+  );
 
   resetCategoryMode_();
 
   setInterval(() => {
-    if (useNow.checked && !isSaving) setNow();
+    if (
+      useNow.checked &&
+      !isSaving
+    ) {
+      setNow();
+    }
   }, 1000);
 
   renderClock();
-  setInterval(renderClock, 1000);
 
-  startBackendMonitor();
+  setInterval(
+    renderClock,
+    1000
+  );
 
-  refreshQueueCount();
+  // Read the durable local queue before checking the backend. This ensures old
+  // pending visits are discovered and uploaded immediately after startup.
+  refreshQueueCount()
+    .finally(() => {
+      startBackendMonitor();
+    });
+
   refreshSummary();
 
   setInterval(() => {
-    if (!currentRefreshAbort) refreshSummary();
+    if (!currentRefreshAbort) {
+      refreshSummary();
+    }
   }, CONFIG.REFRESH_MS);
 
-  setInterval(flushQueue, CONFIG.FLUSH_MS);
+  setInterval(
+    flushQueue,
+    CONFIG.FLUSH_MS
+  );
 
-  window.addEventListener("online", () => {
-    flushQueue();
-    refreshSummary();
-  });
+  window.addEventListener(
+    "online",
+    () => {
+      flushQueue({
+        announce: true
+      });
+    }
+  );
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refreshSummary();
-  });
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        refreshSummary({
+          fresh: true
+        });
+      }
+    }
+  );
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+  if (
+    "serviceWorker" in navigator
+  ) {
+    navigator.serviceWorker
+      .register(
+        "./service-worker.js"
+      )
+      .catch(() => {
+        // Service-worker failure does not stop logging.
+      });
   }
 
-  // Focus staff field on load so keyboard navigation works immediately
+  // Focus the staff field on load.
   focusStaffSoon_(80);
 
   // ============================================================
   // Theme toggle
   // ============================================================
   (function themeToggle() {
-    const KEY  = "fablab_theme";
-    const root = document.documentElement;
-    const btn  = document.getElementById("themeToggle");
-    if (!btn) return;
+    const KEY =
+      "fablab_theme";
 
-    const iconEl = btn.querySelector(".icon");
+    const root =
+      document.documentElement;
+
+    const button =
+      document.getElementById(
+        "themeToggle"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const iconElement =
+      button.querySelector(
+        ".icon"
+      );
 
     function initialTheme() {
-      const saved = localStorage.getItem(KEY);
-      if (saved === "light" || saved === "dark") return saved;
+      const saved =
+        localStorage.getItem(KEY);
+
+      if (
+        saved === "light" ||
+        saved === "dark"
+      ) {
+        return saved;
+      }
+
       return "dark";
     }
 
     function applyTheme(mode) {
-      root.setAttribute("data-theme", mode);
-      if (iconEl) iconEl.textContent = mode === "light" ? "🌙" : "☀️";
-      btn.setAttribute("aria-label", `Switch to ${mode === "light" ? "dark" : "light"} theme`);
-      btn.setAttribute("aria-pressed", mode === "dark" ? "true" : "false");
+      root.setAttribute(
+        "data-theme",
+        mode
+      );
+
+      if (iconElement) {
+        iconElement.textContent =
+          mode === "light"
+            ? "🌙"
+            : "☀️";
+      }
+
+      button.setAttribute(
+        "aria-label",
+        `Switch to ${
+          mode === "light"
+            ? "dark"
+            : "light"
+        } theme`
+      );
+
+      button.setAttribute(
+        "aria-pressed",
+        mode === "dark"
+          ? "true"
+          : "false"
+      );
     }
 
-    applyTheme(initialTheme());
+    applyTheme(
+      initialTheme()
+    );
 
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      const current = root.getAttribute("data-theme") || initialTheme();
-      const next = current === "light" ? "dark" : "light";
-      localStorage.setItem(KEY, next);
-      applyTheme(next);
-    });
+    button.addEventListener(
+      "click",
+      event => {
+        event.preventDefault();
+
+        const current =
+          root.getAttribute(
+            "data-theme"
+          ) || initialTheme();
+
+        const next =
+          current === "light"
+            ? "dark"
+            : "light";
+
+        localStorage.setItem(
+          KEY,
+          next
+        );
+
+        applyTheme(next);
+      }
+    );
   })();
 })();
