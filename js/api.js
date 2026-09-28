@@ -7,6 +7,7 @@
 const api = (() => {
   const TIMEOUTS = {
     health: 6000,
+    weekly: 15000,
     read: 20000,
     write: 8000,
     confirm: 6000
@@ -272,6 +273,32 @@ const api = (() => {
         method: "GET",
         timeoutMs: TIMEOUTS.read,
         ...fetchOptions
+      }
+    );
+  }
+
+  async function getWeekly(
+    start,
+    end,
+    options = {}
+  ) {
+    if (!start || !end) {
+      return errorResult(
+        "A start and end time are required.",
+        "validation",
+        false
+      );
+    }
+
+    return fetchJson(
+      makeGetUrl("weekly", {
+        start: String(start),
+        end: String(end)
+      }),
+      {
+        method: "GET",
+        timeoutMs: TIMEOUTS.weekly,
+        ...options
       }
     );
   }
@@ -616,6 +643,7 @@ const api = (() => {
 
   return {
     getSummary,
+    getWeekly,
     getMeta,
     postVisit,
     postVisits,

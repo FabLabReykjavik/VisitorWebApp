@@ -4,7 +4,7 @@
 // Google Apps Script requests are deliberately never intercepted or cached.
 
 const CACHE_PREFIX = "visitor-app-";
-const CACHE = `${CACHE_PREFIX}v10`;
+const CACHE = `${CACHE_PREFIX}v11`;
 
 // Resolve assets relative to the service-worker scope. This works both at a
 // domain root and when the logger is hosted inside a project subdirectory.

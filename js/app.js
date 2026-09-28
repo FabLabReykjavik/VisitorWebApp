@@ -197,6 +197,7 @@
   let isFlushing = false;
   let lastSubmitAt = 0;
   let currentRefreshAbort = null;
+  let currentWeeklyAbort = null;
   let pendingCount = 0;
 
   // null = checking
@@ -1244,12 +1245,10 @@
         // Refresh the visible statistics after the server confirms the upload.
         // This same response also performs the milestone check, avoiding a
         // second summary request.
-        setTimeout(
-          () => refreshSummary({
-            fresh: true
-          }),
-          0
-        );
+        setTimeout(() => {
+          refreshFastStats();
+          refreshSummary();
+        }, 0);
       } else if (
         lastFailure &&
         lastFailure.retryable === false
@@ -1415,6 +1414,101 @@
   // ============================================================
   // Summary and retained charts
   // ============================================================
+  function renderWeeklyStats_(result) {
+    if (!result || !result.ok) {
+      return;
+    }
+
+    if (todayEl) {
+      todayEl.textContent =
+        String(result.today_total ?? 0);
+    }
+
+    const monday =
+      getWeekStartLocal(new Date());
+
+    const days =
+      monToFriLocal(monday);
+
+    const labels =
+      days.map(labelDowMonDay);
+
+    const keys =
+      days.map(ymdLocal);
+
+    const counts =
+      keys.map(key => {
+        return Number(
+          (
+            result.buckets ||
+            result.week_buckets ||
+            {}
+          )[key] || 0
+        );
+      });
+
+    charts.bar(
+      "chartWeek",
+      labels,
+      counts,
+      "Visitors this week"
+    );
+  }
+
+  async function refreshFastStats() {
+    if (currentWeeklyAbort) {
+      currentWeeklyAbort.abort();
+    }
+
+    const abortController =
+      new AbortController();
+
+    currentWeeklyAbort =
+      abortController;
+
+    const monday =
+      getWeekStartLocal(new Date());
+
+    const nextMonday =
+      new Date(monday);
+
+    nextMonday.setDate(
+      monday.getDate() + 7
+    );
+
+    const result =
+      typeof api.getWeekly === "function"
+        ? await api.getWeekly(
+            monday.toISOString(),
+            nextMonday.toISOString(),
+            {
+              signal:
+                abortController.signal
+            }
+          )
+        : await api.getSummary({
+            signal:
+              abortController.signal
+          });
+
+    if (
+      currentWeeklyAbort !==
+      abortController
+    ) {
+      return;
+    }
+
+    currentWeeklyAbort = null;
+
+    if (!result || !result.ok) {
+      // Keep the last valid count. On first load the UI remains an ellipsis
+      // instead of incorrectly claiming that today's total is zero.
+      return;
+    }
+
+    renderWeeklyStats_(result);
+  }
+
   async function refreshSummary({
     fresh = false
   } = {}) {
@@ -1446,54 +1540,11 @@
       return;
     }
 
-    todayEl.textContent =
-      String(
-        result.today_total ?? 0
-      );
-
     // Reuse this summary response for the milestone check. The older version
     // issued a second identical summary request after each upload.
     maybeCelebrateYearMilestone_(
       result.year_total
     );
-
-    // Visitors this week
-    (function renderWeek() {
-      const monday =
-        getWeekStartLocal(
-          new Date()
-        );
-
-      const days =
-        monToFriLocal(monday);
-
-      const labels =
-        days.map(
-          labelDowMonDay
-        );
-
-      const keys =
-        days.map(
-          ymdLocal
-        );
-
-      const counts =
-        keys.map(key => {
-          return Number(
-            (
-              result.week_buckets ||
-              {}
-            )[key] || 0
-          );
-        });
-
-      charts.bar(
-        "chartWeek",
-        labels,
-        counts,
-        "Visitors this week"
-      );
-    })();
 
     // Visitors by reason
     const [
@@ -2019,13 +2070,29 @@
       startBackendMonitor();
     });
 
+  if (todayEl) {
+    todayEl.textContent = "…";
+  }
+
+  refreshFastStats();
   refreshSummary();
 
+  setInterval(() => {
+    if (!currentWeeklyAbort) {
+      refreshFastStats();
+    }
+  }, CONFIG.REFRESH_MS);
+
+  // The full reason/machine aggregation is much more expensive than the
+  // timestamp-only count. Refresh it less often so it cannot slow the logger.
   setInterval(() => {
     if (!currentRefreshAbort) {
       refreshSummary();
     }
-  }, CONFIG.REFRESH_MS);
+  }, Math.max(
+    (Number(CONFIG.REFRESH_MS) || 60000) * 5,
+    300000
+  ));
 
   setInterval(
     flushQueue,
@@ -2048,9 +2115,8 @@
         document.visibilityState ===
         "visible"
       ) {
-        refreshSummary({
-          fresh: true
-        });
+        refreshFastStats();
+        refreshSummary();
       }
     }
   );
